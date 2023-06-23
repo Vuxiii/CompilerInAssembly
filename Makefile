@@ -1,6 +1,6 @@
 
-main: main.o lexer.o config.o
-	ld main.o lexer.o config.o -o main
+main: main.o lexer.o config.o utils.o
+	ld -o main main.o lexer.o config.o utils.o
 
 main.o: main.s
 	as -gstabs main.s -o main.o
@@ -10,6 +10,9 @@ config.o: config.s
 
 lexer.o: lexer.s
 	as -gstabs lexer.s -o lexer.o
+
+utils.o: utils.s
+	as -gstabs utils.s -o utils.o
 
 phony: clean run crun
 

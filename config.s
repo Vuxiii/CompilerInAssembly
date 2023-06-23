@@ -1,10 +1,17 @@
 # This file contains global settings for the compiler.
 # In here we define the different tokens.
 .data
+
+.global number_tokens
+        number_tokens:     .space 256 # These number tokens can be indexed into. Each number spans 4 bytes (32 bit)
+
+.global identifier_tokens
+        identifier_tokens: .space 256 # These identifier tokens can be index into. Each identifier spans 4 chars (32 bit)
+
 .global input_buffer
         input_buffer: .space 30
 .global in
-        in:         .asciz "def a ( a )            if ( a == a ) print ( a ) EOP print asd asd asd"
+        in:         .asciz "152 EOP print asd asd asd"
 
 .global true
         true:       .asciz "True\n"
@@ -26,7 +33,19 @@
         lparen:     .asciz "("     # 5
 .global rparen
         rparen:     .asciz ")"     # 6
-.global vara
-        vara:       .asciz "a"     # 7
+.global lcurly
+        lcurly:     .asciz "{"     # 7
+.global rcurly
+        rcurly:     .asciz "}"     # 8
+.global lbracket
+        lbracket:   .asciz "["     # 9
+.global rbracket
+        rbracket:   .asciz "]"     # 10
 .global print
-        print:      .asciz "print" # 8
+        print:      .asciz "print" # 11
+
+.global number_0
+        number_0:   .asciz "0"
+
+.global number_9
+        number_9:   .asciz "9"

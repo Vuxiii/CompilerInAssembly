@@ -8,8 +8,14 @@
 .extern assignment # 4
 .extern lparen     # 5
 .extern rparen     # 6
-.extern vara       # 7
-.extern print      # 8
+.extern lcurly     # 7
+.extern rcurly     # 8
+.extern lbracket   # 9
+.extern rbracket   # 10
+.extern print      # 11
+.extern number     # 12
+.extern identifier # 13
+
 
 
 .section .text
@@ -21,8 +27,6 @@ _llopers:
     pop %rdi
 
     callq get_token
-    // addq $1, %rcx
-    // addq %rcx, %rdi
     inc %rdi
     push %rdi
 
@@ -39,8 +43,14 @@ _llopers:
     cmp $6, %rax 
     je print_rparen
     cmp $7, %rax 
-    je print_vara
+    je print_lcurly
     cmp $8, %rax 
+    je print_rcurly
+    cmp $9, %rax 
+    je print_lbracket
+    cmp $10, %rax 
+    je print_rbracket
+    cmp $11, %rax 
     je print_print
     cmp $-1, %rax 
     je print_eop
@@ -94,10 +104,31 @@ print_rparen:
     movq $2, %rdx
     syscall
     jmp _llopers
-print_vara:
+print_lcurly:
     movq $1, %rax
     movq $1, %rdi
-    leaq vara, %rsi
+    leaq lcurly, %rsi
+    movq $2, %rdx
+    syscall
+    jmp _llopers
+print_rcurly:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq rcurly, %rsi
+    movq $2, %rdx
+    syscall
+    jmp _llopers
+print_lbracket:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq lbracket, %rsi
+    movq $2, %rdx
+    syscall
+    jmp _llopers
+print_rbracket:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq rbracket, %rsi
     movq $2, %rdx
     syscall
     jmp _llopers
@@ -145,75 +176,3 @@ end_start:
 // out %rax: The id of the token. See header
 // out %rdi: The buffer at the current location
 
-
-// in: %rdi: Buffer to fill
-// in: %al: Byte to fill with
-// in: %rcx: count
-fill_buffer:
-    movb %al, (%rdi)
-    inc %rdi
-    dec %rcx
-    cmpq $0, %rcx
-    jne fill_buffer
-    ret
-
-// in %rdi: target buffer
-// in: %rsi: source buffer '\0' terminated
-copy_string:
-    movb (%rsi), %al         # Move a byte from source to %al
-    movb %al, (%rdi)         # Move the byte from %al to destination
-    inc %rsi                 # Increment the source address
-    inc %rdi                 # Increment the destination address
-    cmpb $0, %al             # Compare the moved byte with 0 (end of string)
-    jne copy_string           # Jump to movsb_loop if the byte is not zero
-    ret
-
-# IN: %rcx: offset into buffer.
-# IN: %rdx: Bytes to read
-read_char:
-    movq $0, %rax
-    movq $0, %rdi
-    leaq input_buffer, %rsi
-    addq %rcx, %rsi
-    syscall
-    ret
-
-
-main_loop:
-    movq $0, %r8
-
-read_loop:
-// Read from std in
-   
-    movq %r8, %rcx
-    movq $10, %rdx
-    callq read_char
-    addq %rax, %r8
-    // Check if we are done reading from std in
-    cmpq $0, %rax 
-    je loop_read
-
-    // Check if we have reached the capacity of our buffer
-    // If so, flush
-    cmpq $20, %r8
-    jge flush_buffer
-
-    // Repeat reading
-    jmp read_loop
-
-flush_buffer:
-    movq $1, %rax
-    movq $1, %rdi
-    leaq input_buffer, %rsi
-    movq %r8, %rdx
-    movq $0, %r8
-    syscall
-    jmp read_loop
-
-loop_read:
-    movq $1, %rax
-    movq $1, %rdi
-    leaq input_buffer, %rsi
-    movq %r8, %rdx
-    syscall
-    ret
