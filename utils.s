@@ -12,6 +12,7 @@ identifier_count:   .int 0
 // in:  %rdx: count (NO \0 CHAR! Will be inserted by this call)
 // out: %rax: identifier descriptor
 .global insert_identifier
+.type insert_identifier, @function
 insert_identifier:
     lea identifier_tokens(%rip), %rax
     xor %rbx, %rbx
@@ -39,6 +40,7 @@ insert_chars:
 // in:  %rdi: identifier descriptor
 // out: %rax: char * to buffer
 .global retrieve_identifier
+.type retrieve_identifier, @function
 retrieve_identifier:
     lea identifier_tokens(%rip), %rax
     addq %rdi, %rax
@@ -48,6 +50,7 @@ retrieve_identifier:
 // in:  %rdi: number
 // out: %rax: number descriptor
 .global insert_number
+.type insert_number, @function
 insert_number:
     leaq number_tokens(%rip), %rax
     xor %rsi, %rsi
@@ -61,6 +64,7 @@ insert_number:
 // in:  %rdi: number descriptor
 // out: %rax: the number associated with the descriptor
 .global retrieve_number
+.type retrieve_number, @function
 retrieve_number:
     lea number_tokens(%rip), %rax
     mov (%rax, %rdi, 4), %rax
@@ -72,6 +76,7 @@ retrieve_number:
 // NOTE: This function assumes that rsi contains a '\0' to terminate the string 2. 
 // The only way to return true, is if rdi and rsi match until the \0 char is met in rsi.
 .global cmp_string
+.type cmp_string, @function
 cmp_string:
     xor %rax, %rax
     xor %rbx, %rbx
@@ -108,6 +113,7 @@ cmp_string_true:
 // in: %al: Byte to fill with
 // in: %rcx: count
 .global fill_buffer
+.type fill_buffer, @function
 fill_buffer:
     movb %al, (%rdi)
     inc %rdi
@@ -119,6 +125,7 @@ fill_buffer:
 // in %rdi: target buffer
 // in: %rsi: source buffer '\0' terminated
 .global copy_string
+.type copy_string, @function
 copy_string:
     movb (%rsi), %al         # Move a byte from source to %al
     movb %al, (%rdi)         # Move the byte from %al to destination
@@ -131,6 +138,7 @@ copy_string:
 # IN: %rcx: offset into buffer.
 # IN: %rdx: Bytes to read
 .global read_char
+.type read_char, @function
 read_char:
     movq $0, %rax
     movq $0, %rdi

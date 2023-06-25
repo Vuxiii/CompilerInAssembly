@@ -1,6 +1,6 @@
 
-main: main.o lexer.o config.o utils.o
-	ld -o main main.o lexer.o config.o utils.o
+main: main.o lexer.o config.o utils.o parser.o
+	ld -o main main.o lexer.o parser.o config.o utils.o
 
 main.o: main.s
 	as -gstabs main.s -o main.o
@@ -10,6 +10,9 @@ config.o: config.s
 
 lexer.o: lexer.s
 	as -gstabs lexer.s -o lexer.o
+
+parser.o: parser.s
+	as -gstabs parser.s -o parser.o
 
 utils.o: utils.s
 	as -gstabs utils.s -o utils.o

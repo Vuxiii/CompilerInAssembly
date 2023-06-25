@@ -15,7 +15,7 @@
         input_buffer: .space 30
 .global in
         // in:         .asciz "William EOP"
-        in:         .asciz "abekat==321 EOP"
+        in:         .asciz "6 + 3 EOP"
         // in:         .asciz "= def == ( ) if { } [] print while +- /    * < > && let || willi EOP"
         // in:         .asciz "def if = == ( ) { } [] print while +- /    * < > && let || 12 ass EOP"
 

@@ -35,8 +35,14 @@
 .section .text
 .global _start
 _start:
+    push %rbp
+    mov %rsp, %rbp 
     movq $in, %rdi
     movq %rdi, (buffer_address)(%rip)
+
+    callq parse
+    jmp end_start
+// ignore below for now.
 _llopers:
 
     callq get_token
@@ -313,7 +319,7 @@ print_number:
     callq retrieve_number
     
     // Count the length of the number
-    
+
 
     // movq $1, %rax
     // movq $1, %rdi
@@ -325,6 +331,7 @@ print_number:
 
 
 end_start:
+    leave
     movq $60, %rax
     movq $0, %rdi
     syscall
