@@ -63,3 +63,6 @@ expression:      descriptor
     type: 27
     node->type:  token_id
     node:        descriptor
+
+binary_op_buffer:
+    [(lhs_id, lhs_descriptor, operator_id, rhs_id, rhs_descriptor)]

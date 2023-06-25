@@ -429,24 +429,24 @@ identify_token:
 
 
 get_token_return_eop:
-    // rax: eop token id
-    leave
-    ret
+        // rax: eop token id
+        leave
+        ret
 get_token_return_keyword:
-    // rax: keyword token id
-    leave
-    ret
+        // rax: keyword token id
+        leave
+        ret
 get_token_return_number:
-    // rax: number token id
-    // rbx: number descriptor
-    movq %rax, %rbx
-    movq $25, %rax
-    leave
-    ret
+        // rax: number token id
+        // rbx: number descriptor
+        movq %rax, %rbx
+        movq $25, %rax
+        leave
+        ret
 get_token_return_identifier:
-    // rax: identifier token id
-    // rbx: identifier descriptor
-    movq %rax, %rbx
-    movq $24, %rax
-    leave
-    ret
+        // rax: identifier token id
+        // rbx: identifier descriptor
+        movq %rax, %rbx
+        movq $24, %rax
+        leave
+        ret

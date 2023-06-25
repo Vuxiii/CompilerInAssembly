@@ -3,19 +3,19 @@ main: main.o lexer.o config.o utils.o parser.o
 	ld -o main main.o lexer.o parser.o config.o utils.o
 
 main.o: main.s
-	as -gstabs main.s -o main.o
+	as -ggdb main.s -o main.o
 
 config.o: config.s
-	as -gstabs config.s -o config.o
+	as -ggdb config.s -o config.o
 
 lexer.o: lexer.s
-	as -gstabs lexer.s -o lexer.o
+	as -ggdb lexer.s -o lexer.o
 
 parser.o: parser.s
-	as -gstabs parser.s -o parser.o
+	as -ggdb parser.s -o parser.o
 
 utils.o: utils.s
-	as -gstabs utils.s -o utils.o
+	as -ggdb utils.s -o utils.o
 
 phony: clean run crun
 
