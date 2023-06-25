@@ -95,9 +95,7 @@ token_loop:
             cmp %r9, %rcx
             jne submit_number
     # Register the computed number and store the descriptor somewhere
-    inc %rcx
     addq %rcx, %rdi
-    inc %rdi
     movq %rdi, (buffer_address)(%rip)
     movq %rbx, %rdi
     callq insert_number
@@ -151,9 +149,7 @@ not_a_number:
         popq %rcx
         # Now RAX contains the descriptor for the identifier.
 
-        inc %rcx
         addq %rcx, %rdi
-        inc %rdi
         movq %rdi, (buffer_address)(%rip)
         jmp get_token_return_identifier
 

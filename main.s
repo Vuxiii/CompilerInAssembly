@@ -296,14 +296,25 @@ print_or:
     callq println
     jmp _llopers
 print_identifier:
-    // movq $1, %rax
-    // movq $1, %rdi
-    // leaq token_identifier, %rsi
-    // movq $5, %rdx
-    // syscall
-    // callq println
+
+    movq %rbx, %rdi
+    callq retrieve_identifier
+
+    movq %rax, %rsi
+    movq $1, %rax
+    movq $1, %rdi
+    movq $100, %rdx # dumb number.
+    syscall
+    callq println
     jmp _llopers
 print_number:
+
+    movq %rbx, %rdi
+    callq retrieve_number
+    
+    // Count the length of the number
+    
+
     // movq $1, %rax
     // movq $1, %rdi
     // leaq token_number, %rsi

@@ -49,12 +49,13 @@ retrieve_identifier:
 // out: %rax: number descriptor
 .global insert_number
 insert_number:
-    lea number_tokens(%rip), %rax
-    mov $number_count, %rsi
+    leaq number_tokens(%rip), %rax
+    xor %rsi, %rsi
+    mov number_count(%rip), %esi
     mov %rdi, (%rax, %rsi, 4)
     mov %rsi, %rax
     inc %rsi
-    mov %rsi, number_count
+    mov %esi, number_count(%rip)
     ret
 
 // in:  %rdi: number descriptor
@@ -137,6 +138,7 @@ read_char:
     addq %rcx, %rsi
     syscall
     ret
+
 
 
 main_loop:
