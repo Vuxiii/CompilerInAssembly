@@ -8,26 +8,32 @@ identifier_count:   .int 0
 
 .section .text
 
-// in:  %rdi: identifier buffer // 4 bytes in total
+// in:  %rdi: identifier buffer
+// in:  %rdx: count (NO \0 CHAR! Will be inserted by this call)
 // out: %rax: identifier descriptor
 .global insert_identifier
 insert_identifier:
-    lea identifier_tokens, %rax
-    mov identifier_count, %rsi
+    lea identifier_tokens(%rip), %rax
+    xor %rbx, %rbx
+    mov identifier_count(%rip), %ebx
+    addq %rbx, %rax # Correct offset into token buffer
+    xorq %rdx, %rdx  # Clear inter reg for chars.
+    xorq %rcx, %rcx  # Clear counter 
 
-    mov (%rdi), %r10
-    mov 1(%rdi), %r11
-    mov 2(%rdi), %r12
-    mov 3(%rdi), %r13
+insert_chars:
+    # Read the char one by one.
+    movb (%rdi, %rcx, 1), %dl # Read source char
+    movb %dl, (%rax, %rcx, 1) # Move stored char into target buffer
+    inc %rcx # Next char
+    cmp %rsi, %rcx
+    jne insert_chars
+    # Insert '\0'
+    movb $0, (%rax, %rcx, 1)
+    inc %rcx # We have added an extra char
 
-    mov %r10, (%rax)
-    mov %r11, 1(%rax)
-    mov %r12, 2(%rax)
-    mov %r13, 3(%rax)
-
-    mov %rsi, %rax # return
-    inc %rsi
-    mov %rsi, identifier_count
+    mov %rbx, %rax  # return
+    addq %rcx, %rbx # Increase the offset into the buffer and store it.
+    mov %ebx, (identifier_count)(%rip)
     ret
 
 // in:  %rdi: identifier descriptor
@@ -35,7 +41,7 @@ insert_identifier:
 .global retrieve_identifier
 retrieve_identifier:
     lea identifier_tokens(%rip), %rax
-    mov identifier_tokens(%rax, %rdi, 4), %rax
+    addq %rdi, %rax
     ret
 
 
@@ -43,8 +49,8 @@ retrieve_identifier:
 // out: %rax: number descriptor
 .global insert_number
 insert_number:
-    lea number_tokens, %rax
-    mov number_count, %rsi
+    lea number_tokens(%rip), %rax
+    mov $number_count, %rsi
     mov %rdi, (%rax, %rsi, 4)
     mov %rsi, %rax
     inc %rsi
@@ -55,13 +61,15 @@ insert_number:
 // out: %rax: the number associated with the descriptor
 .global retrieve_number
 retrieve_number:
-    lea number_tokens, %rax
+    lea number_tokens(%rip), %rax
     mov (%rax, %rdi, 4), %rax
     ret
 
 // in: %rdi: String 1
 // in: %rsi: String 2
 // out: %rax: 1 = true, 0 = false
+// NOTE: This function assumes that rsi contains a '\0' to terminate the string 2. 
+// The only way to return true, is if rdi and rsi match until the \0 char is met in rsi.
 .global cmp_string
 cmp_string:
     movb (%rdi), %al
@@ -72,8 +80,11 @@ cmp_string:
     jne cmp_string_false
 
     // Check if we have reached '\0'
-    cmp $0, %al 
+    cmp $0, %bl 
     je cmp_string_true
+
+    cmp $0, %al
+    je cmp_string_false # Avoid infinite loop. al should never contain \0.
 
     inc %rdi
     inc %rsi

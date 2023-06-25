@@ -1,34 +1,45 @@
 .data
 
-.extern eop        # -1
-.extern none       # 0
-.extern def        # 1
-.extern if         # 2
-.extern equals     # 3
-.extern assignment # 4
-.extern lparen     # 5
-.extern rparen     # 6
-.extern lcurly     # 7
-.extern rcurly     # 8
-.extern lbracket   # 9
-.extern rbracket   # 10
-.extern print      # 11
-.extern number     # 12
-.extern identifier # 13
+.extern token_eop        # -1
+.extern token_none       # 0
+.extern token_def        # 1
+.extern token_if         # 2
+.extern token_equals     # 3
+.extern token_assignment # 4
+.extern token_lparen     # 5
+.extern token_rparen     # 6
+.extern token_lcurly     # 7
+.extern token_rcurly     # 8
+.extern token_lbracket   # 9
+.extern token_rbracket   # 10
+.extern token_print      # 11
+.extern token_while      # 12
+.extern token_plus       # 13
+.extern token_minus      # 14
+.extern token_times      # 15
+.extern token_div        # 16
+.extern token_less       # 17
+.extern token_greater    # 18
+.extern token_true       # 19
+.extern token_false      # 20
+.extern token_let        # 21
+.extern token_and        # 22
+.extern token_or         # 23
+.extern token_identifier # 24
+.extern token_number     # 25
 
+.extern buffer_address
 
+.extern newline
 
 .section .text
 .global _start
 _start:
     movq $in, %rdi
-    push %rdi
+    movq %rdi, (buffer_address)(%rip)
 _llopers:
-    pop %rdi
 
     callq get_token
-    inc %rdi
-    push %rdi
 
     cmp $1, %rax
     je print_def
@@ -52,127 +63,266 @@ _llopers:
     je print_rbracket
     cmp $11, %rax 
     je print_print
+    cmp $12, %rax 
+    je print_while
+    cmp $13, %rax 
+    je print_plus
+    cmp $14, %rax 
+    je print_minus
+    cmp $15, %rax 
+    je print_times
+    cmp $16, %rax 
+    je print_div
+    cmp $17, %rax 
+    je print_less
+    cmp $18, %rax 
+    je print_greater
+    cmp $19, %rax 
+    je print_true
+    cmp $20, %rax 
+    je print_false
+    cmp $21, %rax 
+    je print_let
+    cmp $22, %rax 
+    je print_and
+    cmp $23, %rax 
+    je print_or
+    cmp $24, %rax 
+    je print_identifier
+    cmp $25, %rax 
+    je print_number
     cmp $-1, %rax 
     je print_eop
     
     
     movq $1, %rax
     movq $1, %rdi
-    leaq none, %rsi
+    leaq token_none, %rsi
     movq $5, %rdx
     syscall
+    callq println
     jmp end_start
 print_def:
     movq $1, %rax
     movq $1, %rdi
-    leaq def, %rsi
+    leaq token_def, %rsi
     movq $4, %rdx
     syscall
+    callq println
     jmp _llopers
 print_if:
     movq $1, %rax
     movq $1, %rdi
-    leaq if, %rsi
+    leaq token_if, %rsi
     movq $3, %rdx
     syscall
+    callq println
     jmp _llopers
 print_equals:
     movq $1, %rax
     movq $1, %rdi
-    leaq equals, %rsi
+    leaq token_equals, %rsi
     movq $3, %rdx
     syscall
+    callq println
     jmp _llopers
 print_assignment:
     movq $1, %rax
     movq $1, %rdi
-    leaq assignment, %rsi
+    leaq token_assignment, %rsi
     movq $2, %rdx
     syscall
+    callq println
     jmp _llopers
 print_lparen:
     movq $1, %rax
     movq $1, %rdi
-    leaq lparen, %rsi
+    leaq token_lparen, %rsi
     movq $2, %rdx
     syscall
+    callq println
     jmp _llopers
 print_rparen:
     movq $1, %rax
     movq $1, %rdi
-    leaq rparen, %rsi
+    leaq token_rparen, %rsi
     movq $2, %rdx
     syscall
+    callq println
     jmp _llopers
 print_lcurly:
     movq $1, %rax
     movq $1, %rdi
-    leaq lcurly, %rsi
+    leaq token_lcurly, %rsi
     movq $2, %rdx
     syscall
+    callq println
     jmp _llopers
 print_rcurly:
     movq $1, %rax
     movq $1, %rdi
-    leaq rcurly, %rsi
+    leaq token_rcurly, %rsi
     movq $2, %rdx
     syscall
     jmp _llopers
 print_lbracket:
     movq $1, %rax
     movq $1, %rdi
-    leaq lbracket, %rsi
+    leaq token_lbracket, %rsi
     movq $2, %rdx
     syscall
+    callq println
     jmp _llopers
 print_rbracket:
     movq $1, %rax
     movq $1, %rdi
-    leaq rbracket, %rsi
+    leaq token_rbracket, %rsi
     movq $2, %rdx
     syscall
+    callq println
     jmp _llopers
 print_print:
     movq $1, %rax
     movq $1, %rdi
-    leaq print, %rsi
+    leaq token_print, %rsi
     movq $6, %rdx
     syscall
+    callq println
     jmp _llopers
 print_eop:
     movq $1, %rax
     movq $1, %rdi
-    leaq eop, %rsi
+    leaq token_eop, %rsi
     movq $4, %rdx
     syscall
+    callq println
     jmp end_start
-    // callq main_loop
 
-    // movq $def, %rdi
-    // callq cmp_string
+print_while:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_while, %rsi
+    movq $6, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_plus:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_plus, %rsi
+    movq $5, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_minus:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_minus, %rsi
+    movq $6, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_times:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_times, %rsi
+    movq $6, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_div:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_div, %rsi
+    movq $4, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_less:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_less, %rsi
+    movq $5, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_greater:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_greater, %rsi
+    movq $8, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_true:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_true, %rsi
+    movq $5, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_false:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_false, %rsi
+    movq $6, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_let:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_let, %rsi
+    movq $4, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_and:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_and, %rsi
+    movq $3, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_or:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_or, %rsi
+    movq $3, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_identifier:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_identifier, %rsi
+    movq $5, %rdx
+    syscall
+    callq println
+    jmp _llopers
+print_number:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq token_number, %rsi
+    movq $5, %rdx
+    syscall
+    callq println
+    jmp _llopers
 
-//     cmp $0, %ax
-//     je print_false
-//     movq $1, %rax
-//     movq $1, %rdi
-//     leaq true, %rsi
-//     movq $5, %rdx
-//     syscall
-//     jmp end_start
-
-// print_false:
-//     movq $1, %rax
-//     movq $1, %rdi
-//     leaq false, %rsi
-//     movq $6, %rdx
-//     syscall
 
 end_start:
     movq $60, %rax
     movq $0, %rdi
     syscall
 
-// in  %rdi: The buffer to find the next token
-// out %rax: The id of the token. See header
-// out %rdi: The buffer at the current location
 
+println:
+    movq $1, %rax
+    movq $1, %rdi
+    leaq newline, %rsi
+    movq $2, %rdx
+    syscall
+    ret
+    
