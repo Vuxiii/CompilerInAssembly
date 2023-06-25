@@ -97,6 +97,7 @@ token_loop:
     # Register the computed number and store the descriptor somewhere
     inc %rcx
     addq %rcx, %rdi
+    inc %rdi
     movq %rdi, (buffer_address)(%rip)
     movq %rbx, %rdi
     callq insert_number
@@ -152,6 +153,7 @@ not_a_number:
 
         inc %rcx
         addq %rcx, %rdi
+        inc %rdi
         movq %rdi, (buffer_address)(%rip)
         jmp get_token_return_identifier
 
@@ -193,6 +195,30 @@ identify_token:
         callq cmp_string
         cmp $1, %ax
         je return_rparen_token
+
+        movq %rdx, %rdi
+        movq $token_lbracket, %rsi
+        callq cmp_string
+        cmp $1, %ax
+        je return_lbracket_token
+
+        movq %rdx, %rdi
+        movq $token_rbracket, %rsi
+        callq cmp_string
+        cmp $1, %ax
+        je return_rbracket_token
+
+        movq %rdx, %rdi
+        movq $token_lcurly, %rsi
+        callq cmp_string
+        cmp $1, %ax
+        je return_lcurly_token
+
+        movq %rdx, %rdi
+        movq $token_rcurly, %rsi
+        callq cmp_string
+        cmp $1, %ax
+        je return_rcurly_token
 
         movq %rdx, %rdi
         movq $token_print, %rsi
@@ -282,146 +308,122 @@ identify_token:
         ret
 
         return_def_token:
-            addq $4, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $1, %rax
             ret
         return_if_token:
-            addq $3, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $2, %rax
             ret
         return_equals_token:
-            addq $3, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $3, %rax
             ret
         return_assignment_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $4, %rax
             ret
         return_lparen_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $5, %rax
             ret
         return_rparen_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $6, %rax
             ret
         return_lcurly_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $7, %rax
             ret
         return_rcurly_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $8, %rax
             ret
         return_lbracket_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $9, %rax
             ret
         return_rbracket_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $10, %rax
             ret
         return_print_token:
-            addq $6, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $11, %rax
             ret
         return_while_token:
-            addq $6, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $12, %rax
             ret
         return_plus_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $13, %rax
             ret
         return_minus_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $14, %rax
             ret
         return_times_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $15, %rax
             ret
         return_div_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $16, %rax
             ret
         return_less_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $17, %rax
             ret
         return_greater_token:
-            addq $2, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $18, %rax
             ret
         return_true_token:
-            addq $5, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $19, %rax
             ret
         return_false_token:
-            addq $6, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $20, %rax
             ret
         return_let_token:
-            addq $4, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $21, %rax
             ret
         return_and_token:
-            addq $3, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $22, %rax
             ret
         return_or_token:
-            addq $4, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $23, %rax
             ret
         return_eop_token:
-            addq $4, %rdx
-            movq %rdx, (buffer_address)(%rip)
+            movq %rdi, (buffer_address)(%rip)
 
             movq $-1, %rax
             ret

@@ -106,7 +106,7 @@ print_def:
     movq $1, %rax
     movq $1, %rdi
     leaq token_def, %rsi
-    movq $4, %rdx
+    movq $3, %rdx
     syscall
     callq println
     jmp _llopers
@@ -114,7 +114,7 @@ print_if:
     movq $1, %rax
     movq $1, %rdi
     leaq token_if, %rsi
-    movq $3, %rdx
+    movq $2, %rdx
     syscall
     callq println
     jmp _llopers
@@ -122,7 +122,7 @@ print_equals:
     movq $1, %rax
     movq $1, %rdi
     leaq token_equals, %rsi
-    movq $3, %rdx
+    movq $2, %rdx
     syscall
     callq println
     jmp _llopers
@@ -130,7 +130,7 @@ print_assignment:
     movq $1, %rax
     movq $1, %rdi
     leaq token_assignment, %rsi
-    movq $2, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -138,7 +138,7 @@ print_lparen:
     movq $1, %rax
     movq $1, %rdi
     leaq token_lparen, %rsi
-    movq $2, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -146,7 +146,7 @@ print_rparen:
     movq $1, %rax
     movq $1, %rdi
     leaq token_rparen, %rsi
-    movq $2, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -154,7 +154,7 @@ print_lcurly:
     movq $1, %rax
     movq $1, %rdi
     leaq token_lcurly, %rsi
-    movq $2, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -162,14 +162,15 @@ print_rcurly:
     movq $1, %rax
     movq $1, %rdi
     leaq token_rcurly, %rsi
-    movq $2, %rdx
+    movq $1, %rdx
     syscall
+    callq println
     jmp _llopers
 print_lbracket:
     movq $1, %rax
     movq $1, %rdi
     leaq token_lbracket, %rsi
-    movq $2, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -177,7 +178,7 @@ print_rbracket:
     movq $1, %rax
     movq $1, %rdi
     leaq token_rbracket, %rsi
-    movq $2, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -185,7 +186,7 @@ print_print:
     movq $1, %rax
     movq $1, %rdi
     leaq token_print, %rsi
-    movq $6, %rdx
+    movq $5, %rdx
     syscall
     callq println
     jmp _llopers
@@ -193,7 +194,7 @@ print_eop:
     movq $1, %rax
     movq $1, %rdi
     leaq token_eop, %rsi
-    movq $4, %rdx
+    movq $3, %rdx
     syscall
     callq println
     jmp end_start
@@ -202,7 +203,7 @@ print_while:
     movq $1, %rax
     movq $1, %rdi
     leaq token_while, %rsi
-    movq $6, %rdx
+    movq $5, %rdx
     syscall
     callq println
     jmp _llopers
@@ -210,7 +211,7 @@ print_plus:
     movq $1, %rax
     movq $1, %rdi
     leaq token_plus, %rsi
-    movq $5, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -218,7 +219,7 @@ print_minus:
     movq $1, %rax
     movq $1, %rdi
     leaq token_minus, %rsi
-    movq $6, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -226,7 +227,7 @@ print_times:
     movq $1, %rax
     movq $1, %rdi
     leaq token_times, %rsi
-    movq $6, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -234,7 +235,7 @@ print_div:
     movq $1, %rax
     movq $1, %rdi
     leaq token_div, %rsi
-    movq $4, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -242,7 +243,7 @@ print_less:
     movq $1, %rax
     movq $1, %rdi
     leaq token_less, %rsi
-    movq $5, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -250,7 +251,7 @@ print_greater:
     movq $1, %rax
     movq $1, %rdi
     leaq token_greater, %rsi
-    movq $8, %rdx
+    movq $1, %rdx
     syscall
     callq println
     jmp _llopers
@@ -258,7 +259,7 @@ print_true:
     movq $1, %rax
     movq $1, %rdi
     leaq token_true, %rsi
-    movq $5, %rdx
+    movq $4, %rdx
     syscall
     callq println
     jmp _llopers
@@ -266,7 +267,7 @@ print_false:
     movq $1, %rax
     movq $1, %rdi
     leaq token_false, %rsi
-    movq $6, %rdx
+    movq $5, %rdx
     syscall
     callq println
     jmp _llopers
@@ -274,7 +275,7 @@ print_let:
     movq $1, %rax
     movq $1, %rdi
     leaq token_let, %rsi
-    movq $4, %rdx
+    movq $3, %rdx
     syscall
     callq println
     jmp _llopers
@@ -282,7 +283,7 @@ print_and:
     movq $1, %rax
     movq $1, %rdi
     leaq token_and, %rsi
-    movq $3, %rdx
+    movq $2, %rdx
     syscall
     callq println
     jmp _llopers
@@ -290,25 +291,25 @@ print_or:
     movq $1, %rax
     movq $1, %rdi
     leaq token_or, %rsi
-    movq $3, %rdx
+    movq $2, %rdx
     syscall
     callq println
     jmp _llopers
 print_identifier:
-    movq $1, %rax
-    movq $1, %rdi
-    leaq token_identifier, %rsi
-    movq $5, %rdx
-    syscall
-    callq println
+    // movq $1, %rax
+    // movq $1, %rdi
+    // leaq token_identifier, %rsi
+    // movq $5, %rdx
+    // syscall
+    // callq println
     jmp _llopers
 print_number:
-    movq $1, %rax
-    movq $1, %rdi
-    leaq token_number, %rsi
-    movq $5, %rdx
-    syscall
-    callq println
+    // movq $1, %rax
+    // movq $1, %rdi
+    // leaq token_number, %rsi
+    // movq $5, %rdx
+    // syscall
+    // callq println
     jmp _llopers
 
 
@@ -322,7 +323,7 @@ println:
     movq $1, %rax
     movq $1, %rdi
     leaq newline, %rsi
-    movq $2, %rdx
+    movq $1, %rdx
     syscall
     ret
     

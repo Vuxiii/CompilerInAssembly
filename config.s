@@ -14,7 +14,9 @@
 .global input_buffer
         input_buffer: .space 30
 .global in
-        in:         .asciz "def if = == ( ) { } [] print while +- /    * < > && let || 12 ass EOP"
+        // in:         .asciz "def() EOP"
+        in:         .asciz "= def == ( ) if { } [] print while +- /    * < > && let || 12 ass EOP"
+        // in:         .asciz "def if = == ( ) { } [] print while +- /    * < > && let || 12 ass EOP"
 
 .global newline
         newline:    .asciz "\n"

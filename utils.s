@@ -72,24 +72,27 @@ retrieve_number:
 // The only way to return true, is if rdi and rsi match until the \0 char is met in rsi.
 .global cmp_string
 cmp_string:
+    xor %rax, %rax
+    xor %rbx, %rbx
+cmp_string_:
     movb (%rdi), %al
     movb (%rsi), %bl
-    xor %al, %bl
-    // Check if they are equal.
-    cmp $0, %bl 
-    jne cmp_string_false
+    xor %bl, %al
 
     // Check if we have reached '\0'
-    cmp $0, %bl 
+    cmp $0, %bl
     je cmp_string_true
 
-    cmp $0, %al
-    je cmp_string_false # Avoid infinite loop. al should never contain \0.
+
+    // Check if they are equal.
+    cmp $0, %al 
+    jne cmp_string_false
+
 
     inc %rdi
     inc %rsi
     // Go to next byte
-    jmp cmp_string 
+    jmp cmp_string_
 
 cmp_string_false:
     movq $0, %rax
