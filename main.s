@@ -41,6 +41,7 @@ _start:
     movq %rdi, (buffer_address)(%rip)
 
     callq parse
+    callq emit
     jmp end_start
 // ignore below for now.
 _llopers:

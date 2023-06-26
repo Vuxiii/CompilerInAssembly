@@ -281,7 +281,7 @@ construct_binary_op_node:
         mulq %rdx
         mov %rax, %rbx
         pop %rdx
-    // p (int[5])*0x202f33
+    // p (int[5])*0x202fee
         lea binary_op_buffer(%rip), %rax
         
         mov %ecx, (%rax, %rbx)

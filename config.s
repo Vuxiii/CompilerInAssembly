@@ -81,3 +81,65 @@
 
 .global number_9
         number_9:   .asciz "9" # value: 57
+
+.global _emit_asm_prologue
+        _emit_asm_prologue:       .asciz ".section .text\n.global _start:\n"
+
+.global _emit_function_prologue
+        _emit_function_prologue:  .asciz "\n\tpush %rbp\n\tmov %rsp, %rbp\n"
+
+.global _emit_function_epilogue
+        _emit_function_epilogue:  .asciz "\n\tleave\n\tret"
+
+.global _emit_asm_epilogue
+        _emit_asm_epilogue:       .asciz "\n\tleave\n\tmovq $60, %rax\n\tmovq $0, %rdi\n\tsyscall\n"
+
+# --[ Opcodes ]--
+.global _emit_push
+        _emit_push: .asciz "\n\tpush "
+.global _emit_pop
+        _emit_pop: .asciz "\n\tpop "
+.global _emit_add
+        _emit_add: .asciz "\n\taddq "
+.global _emit_sub
+        _emit_sub: .asciz "\n\tsubq "
+.global _emit_lea
+        _emit_lea: .asciz "\n\tleaq "
+.global _emit_call
+        _emit_call: .asciz "\n\tcallq "
+.global _emit_ret
+        _emit_ret: .asciz "\n\tretq"
+.global _emit_jmp
+        _emit_jmp: .asciz "\n\tjmp "
+.global _emit_jne
+        _emit_jne: .asciz "\n\tjne "
+.global _emit_je
+        _emit_je: .asciz "\n\tje "
+.global _emit_jle
+        _emit_jle: .asciz "\n\tjle "
+.global _emit_jge
+        _emit_jge: .asciz "\n\tjge "
+
+# --[ Operands ]--
+.global _emit_rax
+        _emit_rax: .asciz "%rax"
+.global _emit_rbx
+        _emit_rbx: .asciz "%rbx"
+.global _emit_rcx
+        _emit_rcx: .asciz "%rcx"
+.global _emit_rdx
+        _emit_rdx: .asciz "%rdx"
+.global _emit_rdi
+        _emit_rdi: .asciz "%rdi"
+.global _emit_rsi
+        _emit_rsi: .asciz "%rsi"
+
+# --[ Misc ]--
+.global _emit_comma
+        _emit_comma: .asciz ", "
+.global _emit_colon
+        _emit_colon: .asciz ":"
+.global _emit_dollar
+        _emit_dollar: .asciz "$"
+.global _emit_newline_tab
+        _emit_newline_tab: .asciz "\n\t"
