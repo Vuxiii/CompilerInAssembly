@@ -1,6 +1,6 @@
 
-main: main.o lexer.o config.o utils.o parser.o
-	ld -o main main.o lexer.o parser.o config.o utils.o
+main: main.o lexer.o config.o utils.o parser.o emitter.o
+	ld -o main main.o lexer.o parser.o emitter.o config.o utils.o
 
 main.o: main.s
 	as -ggdb main.s -o main.o
@@ -13,6 +13,9 @@ lexer.o: lexer.s
 
 parser.o: parser.s
 	as -ggdb parser.s -o parser.o
+
+emitter.o: emitter.s
+	as -ggdb emitter.s -o emitter.o
 
 utils.o: utils.s
 	as -ggdb utils.s -o utils.o

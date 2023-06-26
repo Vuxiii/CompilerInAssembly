@@ -77,7 +77,7 @@ token_loop:
             // We haven't reached the bottom of the stack. Therefore -> Continue to compute the number
             
             # Fetch the stored char
-            movb (%rdi, %r9), %al 
+            movb (%rdi, %r9), %al
 
             # sub '0' = 48 to it
             subb $48, %al
