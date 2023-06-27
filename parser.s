@@ -32,8 +32,11 @@ binary_op_offset:       .int 0
 assignment_offset:      .int 0
 
 .section .text
-.global parse
+
+// out rax: token_id
+// out rbx: descriptor
 .type parse, @function
+.global parse
 parse:
         push %rbp
         mov %rsp, %rbp 
@@ -44,10 +47,9 @@ parse:
         leave
         ret
 
-
-.type parse_statement, @function
 // out rax: token_id
 // out rbx: descriptor
+.type parse_statement, @function
 parse_statement:
         push %rbp
         mov %rsp, %rbp
@@ -74,9 +76,8 @@ parse_statement:
         cmp $4, %rax
         jne statement_is_not_assignment_restore_last_token
 
-        push %rax
+        # Discard the token '=' from rax. We don't need it
         # We now have the following:
-        # │    token_id    │ '=' 4
         # │token_descriptor│
         # │    token_id    │ 'identifier' 24
         # │      ...       │
@@ -89,17 +90,15 @@ parse_statement:
         push %rbx
         # We now have the following:
         # │token_descriptor│
-        # │    token_id    │ expression 27
-        # │    token_id    │ '=' 4
+        # │    token_id    │ expression ??
         # │token_descriptor│
         # │    token_id    │ 'identifier' 24
         # │      ...       │
         # └────────────────┘
         pop %rdx
         pop %rsi
-        pop %rdi # Remove the '=' token
         pop %rdi
-        call construct_assignment
+        call construct_assignment_node
 
         # Store results
         movq %rax, %rdi 
@@ -230,8 +229,8 @@ parse_expression:
 // in rsi: expr_id
 // in rdx: expr_descriptor
 // out:    assignment descriptor
-.type construct_assignment, @function
-construct_assignment:
+.type construct_assignment_node, @function
+construct_assignment_node:
         push %rbp
         mov %rsp, %rbp
         xor %rbx, %rbx
@@ -260,14 +259,13 @@ construct_assignment:
         leave
         ret
 
-
-.type construct_binary_op_node, @function
 // in rdi: rhs token_id
 // in rsi: rhs token_descriptor
 // in rdx: operator_id
 // in rcx: lhs token_id
 // in r8:  lhs token_descriptor
 // out:    binary op descriptor
+.type construct_binary_op_node, @function
 construct_binary_op_node:
         push %rbp
         mov %rsp, %rbp 
@@ -295,6 +293,69 @@ construct_binary_op_node:
         inc %ebx
         # Store next available descriptor 
         mov %ebx, (binary_op_offset)(%rip)
+
+        leave
+        ret
+
+// in rdi: Token descriptor
+// out 16(%rbp): lhs id
+// out 24(%rbp): lhs descriptor
+// out 32(%rbp): operator id
+// out 40(%rbp): rhs id
+// out 48(%rbp): rhs descriptor
+.type retrieve_binary_op, @function
+.global retrieve_binary_op
+retrieve_binary_op:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $20, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea binary_op_buffer(%rip), %rax
+        
+        mov   (%rax, %rbx), %edi # lhs id
+        mov  4(%rax, %rbx), %esi # lhs desc
+        mov  8(%rax, %rbx), %edx # op id
+        mov 12(%rax, %rbx), %ecx # rhs id
+        mov 16(%rax, %rbx), %r8d # rhs desc
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+        mov %edx, 32(%rbp)
+        mov %ecx, 40(%rbp)
+        mov %r8d, 48(%rbp)
+
+        leave
+        ret
+
+
+// in rdi: token descriptor
+// out  4(%rbp): identifier descriptor
+// out  8(%rbp): expr id
+// out 12(%rbp): expr descriptor
+.type retrieve_assignment, @function
+.global retrieve_assignment
+retrieve_assignment:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $20, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea assignment_buffer(%rip), %rax
+        xor %rdi, %rdi
+        xor %rsi, %rsi
+        xor %rdx, %rdx
+        mov   (%rax, %rbx), %edi # identifier descriptor
+        mov  4(%rax, %rbx), %esi # expr id
+        mov  8(%rax, %rbx), %edx # expr descriptor
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+        mov %edx, 32(%rbp)
 
         leave
         ret

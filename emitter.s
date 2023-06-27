@@ -58,26 +58,187 @@
 emit:
         push %rbp
         mov %rsp, %rbp 
+        push %rdi
+        push %rsi
         callq emit_asm_prologue
         callq emit_function_prologue
 
+        pop %rsi
+        pop %rdi
+        callq check_statement
+
+        callq emit_asm_epilogue
+
+        leave
+        ret
+
+// in rdi: Token id
+// in rsi: Token descriptor
+.type check_statement, @function
+check_statement:
+        push %rbp
+        mov %rsp, %rbp
+
+        cmp $29, %rdi
+        jne not_assignment
+
+        // subq $24, %rsp
+        push $696969
+        push $696969
+        push $696969
+        movq %rsi, %rdi
+        callq retrieve_assignment
+        pop %rax
+        pop %rdi # expr id
+        pop %rsi # expr descriptor
+        push %rax # Store the descripor for the identifier
+
+        callq check_expression
+
+    not_assignment:
+        leave
+        ret
+
+
+// in rdi: Token id
+// in rsi: Token descriptor
+.type check_expression, @function
+check_expression:
+        push %rbp
+        mov %rsp, %rbp
+
+        cmp $26, %rdi # Binary op
+        je binary
+        cmp $25, %rdi # Number
+        je number
+
+        # It was neither a binary op nor a number
+        leave 
+        ret
+    binary:
+        
+        # Just eval the expression
+        # subq $20, %rsp  # Make space for return values
+        push $696969
+        push $696969
+        push $696969
+        push $696969
+        push $696969
+        movq %rsi, %rdi # Move descriptor
+        callq retrieve_binary_op 
+
+        # Evaluate the LHS
+
+        pop %rdi # lhs id
+        pop %rsi # lhs descriptor
+
+        callq check_expression
+
+        # Evaluate the RHS
+
+        pop %rdx # operator id
+        pop %rdi # rhs id
+        pop %rsi  # rhs descriptor 
+        push %rdx # Store operator
+        callq check_expression
+
+        # Both children have now been evaluated
+        callq emit_pop
+        callq emit_rbx
+        callq emit_pop
+        callq emit_rax
+        pop %rdx # Restore operator
+        cmp $13, %rdx
+        je insert_add
+        cmp $14, %rdx
+        je insert_sub
+        leave
+        ret
+
+    number:
+        # We have found a 'number'
+        push %rsi
+        callq emit_push
+        callq emit_dollar
+        # Retrieve the number
+        pop %rdi
+        callq retrieve_number
+        movq %rax, %rdi
+        callq emit_number
+        callq emit_newline_tab
+        leave
+        ret
+
+    insert_add:
         callq emit_add
         callq emit_rax
         callq emit_comma
         callq emit_rbx
+        callq emit_push
+        callq emit_rbx
         callq emit_newline_tab
+        leave 
+        ret
+    insert_sub:
+        callq emit_sub
+        callq emit_rax
+        callq emit_comma
+        callq emit_rbx
+        callq emit_push
+        callq emit_rbx
+        callq emit_newline_tab
+        leave 
+        ret
 
+// in rdi: The number to be displayed
+.type emit_number, @function
+emit_number:
+        push %rbp
+        mov %rsp, %rbp
+        # Because syscalls are slow, we will opt to first count the length of the number. And then print it. This means we will iterate over it twice
 
-        call emit_push
-        call emit_rax
-        call emit_newline_tab
-        call emit_pop
-        call emit_rdi
-        call emit_newline_tab
+        movq %rdi, %rax
+        xor %rcx, %rcx # Counter
+        movq $10, %rbx
+    begin_count:
+        cqto
+        idivq %rbx
+        inc %rcx
+        test %rax, %rax
+        jnz begin_count
 
-        callq emit_asm_epilogue
+        # We will now pack the numbers in a char * We must remember that the stack grows negative. For that reason we will need to push it in reverse order on the stack in order for the write syscall to not print in reverse.
 
+        # Make room on the stack for char *
+        subq %rcx, %rsp
+        # Ensure correct alignment
+        // 4 - (rcx % 4) = correction
+        movq %rcx, %rax
+        cqto
+        movq $4, %rbx
+        idivq %rbx 
+        # We now have the remainder in %rdx
+        subq %rdx, %rbx # This is the correction amount
+        subq %rbx, %rsp
+        # We now have correct alignment
+        movq $10, %rbx
+        movq %rcx, %r8 # Store the count
+        movq %rdi, %rax
+        # Push the char * to stack
+    begin_push:
+        cqto
+        idivq %rbx
+        addb $48, %dl
+        dec %r8
+        movb %dl, (%rsp, %r8, 1)
+        test %r8, %r8
+        jnz begin_push
 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq (%rsp), %rsi
+        movq %rcx, %rdx
+        syscall
         leave
         ret
 

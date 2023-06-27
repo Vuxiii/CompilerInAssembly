@@ -67,7 +67,7 @@ insert_number:
 .type retrieve_number, @function
 retrieve_number:
     lea number_tokens(%rip), %rax
-    mov (%rax, %rdi, 4), %rax
+    mov (%rax, %rdi, 4), %eax
     ret
 
 // in: %rdi: String 1
