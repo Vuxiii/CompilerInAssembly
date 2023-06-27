@@ -16,8 +16,8 @@ param_list : 'identifier'
 var_decl   : 'let' 'identifier' '=' expression
 var_assign : 'identifier' '=' expression
 
-statement  : var_decl ';'
-           | var_assign ';'
+statement  : var_decl
+           | var_assign
            | func_def
            | '{' statement_list '}'
            | 'while' '(' expression ')' statement
@@ -66,16 +66,21 @@ expression:      descriptor
     node->type:  token_id
     node:        descriptor
 
-statement:       descriptor
+statement_list:  descriptor
     type: 28
-    node->type:  token_id
-    node:        descriptor
+    left->type:  token_id
+    left:        descriptor
+    right->type: token_id
+    right:       descriptor
 
 assignment:      descriptor
     type: 29
     identifier:  descriptor
     expr->type:  token_id
     expr:        descriptor
+
+statement_list_buffer: size = 16
+    [(lhs_id, lhs_descriptor, rhs_id, rhs_descriptor),...]
 
 binary_op_buffer: size = 20
     [(lhs_id, lhs_descriptor, operator_id, rhs_id, rhs_descriptor),...]

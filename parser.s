@@ -20,16 +20,20 @@
 .extern number_0
 .extern number_9
 
-_current_token_id_:     .int 0
-_token_data_:           .int 0
+_current_token_id_:             .int 0
+_peek_token_id_:                .int 0
+_token_data_:                   .int 0
+_peek_data_:                    .int 0
 
+.global statement_list_buffer
+        statement_list_buffer:  .space 256
 .global assignment_buffer
         assignment_buffer:      .space 256
 .global binary_op_buffer
         binary_op_buffer:       .space 256
-expressions_buffer:     .space 256
-binary_op_offset:       .int 0
-assignment_offset:      .int 0
+binary_op_offset:               .int 0
+assignment_offset:              .int 0
+statement_list_offset:          .int 0
 
 .section .text
 
@@ -40,7 +44,7 @@ assignment_offset:      .int 0
 parse:
         push %rbp
         mov %rsp, %rbp 
-        
+        call next_token # Move the first token into peek
         // We start by parsing a expression
         callq parse_statement
 
@@ -54,70 +58,101 @@ parse_statement:
         push %rbp
         mov %rsp, %rbp
 
-        callq next_token
-        call current_token_id
+        call peek_token_id
         
         # Check if we have an identifier
         # statement ::= 'identifier' '=' expression
         cmp $24, %rax
-        jne statement_is_not_assignment
-        push %rax
-        call current_token_data
-        push %rax
+        jne node_is_not_statement
 
-        # We now have the following:
-        # │token_descriptor│
-        # │    token_id    │ 'identifier' 24
-        # │      ...       │
-        # └────────────────┘
         // Check the assignment '='
         call next_token
-        call current_token_id
-        cmp $4, %rax
-        jne statement_is_not_assignment_restore_last_token
+        # current_token_id: identifier
+        call peek_token_id
+        cmp $4, %rax # Is it '='?
+        jne node_is_not_statement # Handle other possibilities like function calls here
 
-        # Discard the token '=' from rax. We don't need it
-        # We now have the following:
-        # │token_descriptor│
-        # │    token_id    │ 'identifier' 24
-        # │      ...       │
-        # └────────────────┘
-
+        # current_token_id: identifier
+        # peek_token_id:    '='
+        call current_token_data
+        push %rax
+        call next_token
+        # Parse the right hand side of the assignment
         call parse_expression
         // rax: token_id of output from parse_expression
         // rbx: its token_descriptor
         push %rax
         push %rbx
+
         # We now have the following:
-        # │token_descriptor│
-        # │    token_id    │ expression ??
-        # │token_descriptor│
-        # │    token_id    │ 'identifier' 24
+        # │ expr_descriptor│
+        # │    expr_id     │ 
+        # │   identifier   │
         # │      ...       │
         # └────────────────┘
         pop %rdx
         pop %rsi
         pop %rdi
         call construct_assignment_node
+        push $29  # Store the assignment id
+        push %rax # Store the assignment descriptor
+    
+    check_statement_list:
+        call parse_statement
+        # Check if it was successfull
+        cmp $0, %rax
+        je single_statement
 
+        push %rax
+        push %rbx
+
+        # We now have the following:
+        # │token_descriptor│
+        # │    token_id    │ statement ??
+        # │token_descriptor│
+        # │    token_id    │ statement ??
+        # │      ...       │
+        # └────────────────┘
+
+        pop %rcx
+        pop %rdx
+        pop %rsi
+        pop %rdi
+        call construct_statement_list
+        movq %rax, %rbx
+        movq $28, %rax
+        leave
+        ret
+
+    single_statement:
         # Store results
-        movq %rax, %rdi 
-        call push_token_descriptor
-        movq $29, %rdi
-        call push_token_id
-        mov %eax, %edi
+        pop %rbx # Descriptor
+        pop %rax # Token ID
+        // push %rax
+        // push %rbx
+        // movq %rbx, %rdi
+        // call push_token_descriptor
+        
+        // pop %rbx # Descriptor
+        // pop %rax # Token ID
+        // push %rax
+        // push %rbx
+        // movq %rax, %rdi
+        // call push_token_id
 
         # Ensure correct return values
-        call current_token_data
-        movq %rax, %rbx
-        call current_token_id
+        // pop %rbx # Descriptor
+        // pop %rax # Token ID
         leave
         ret
 
     statement_is_not_assignment_restore_last_token:
         pop %rbx
         pop %rax
-    statement_is_not_assignment:
+        leave
+        ret
+    node_is_not_statement:
+        movq $0, %rax # None
         leave
         ret
 
@@ -128,31 +163,17 @@ parse_expression:
         push %rbp
         mov %rsp, %rbp
         callq next_token
-    
-        // At this stage we have parsed the first expression
 
-        call current_token_id
-        push %rax # Store the token_id
-        call current_token_data
-        push %rax # Store the descriptor
-
-        # We now have the following:
-        # │token_descriptor│
-        # │    token_id    │
-        # │      ...       │
-        # └────────────────┘
         // Check the operator
-
-        call next_token
-        call current_token_id
+        call peek_token_id
         cmp $13, %eax # +
-        je setup_plus_operator
+        je binary_operation
         cmp $14, %eax # -
-        je setup_minus_operator
+        je binary_operation
         cmp $15, %eax # *
-        je setup_times_operator
+        je binary_operation
         cmp $16, %eax # /
-        je setup_div_operator
+        je binary_operation
         cmp $17, %eax # <
         cmp $18, %eax # >
         cmp $22, %eax # &&
@@ -160,12 +181,19 @@ parse_expression:
 
         # It was not an operator.
         # Return the expression
-        pop %rbx
-        pop %rax
+        call current_token_data
+        mov %eax, %ebx
+        call current_token_id
         leave
         ret
 
-    done_with_operator:
+    binary_operation:
+        call current_token_id
+        push %rax
+        call current_token_data
+        push %rax
+        call peek_token_id # The operator
+        push %rax
         # We now have the following:
         # │  operator_id   │
         # │token_descriptor│ LHS
@@ -173,15 +201,18 @@ parse_expression:
         # │      ...       │
         # └────────────────┘
 
+        # We need to eat the operator.
+        call next_token
+
         # Need some logic for handling precedence
 
         callq parse_expression
         # rax should contain the token_id
         # rbx should contain the descriptor
-        // call current_token_id
+        
         push %rax # Store the token_id
-        // call current_token_data
         push %rbx # Store the descriptor
+
         # We now have all we need.
         # │token_descriptor│ RHS
         # │    token_id    │ RHS
@@ -210,20 +241,42 @@ parse_expression:
         leave
         ret
 
-        setup_plus_operator:
-            push $13
-            jmp done_with_operator
-        setup_minus_operator:
-            push $14
-            jmp done_with_operator
-        setup_times_operator:
-            push $15
-            jmp done_with_operator
-        setup_div_operator:
-            push $16
-            jmp done_with_operator
+// in rdi: lhs id
+// in rsi: lhs descriptor
+// in rdx: rhs id
+// in rcx: rhs descriptor
+// out:    assignment descriptor
+.type construct_statement_list, @function
+construct_statement_list:
+        push %rbp
+        mov %rsp, %rbp
+        
+        xor %rbx, %rbx
+        xor %rax, %rax
+        # Compute correct offst into buffer
+        mov statement_list_offset(%rip), %eax
+        push %rax # Store so we can return the descriptor
+        push %rdx # mulq uses rdx...
+        movq $16, %rdx # Size of assignment (16 bytes)
+        mulq %rdx
+        mov %rax, %rbx
+        pop %rdx
+        # We now have the correct offset into the buffer
+        # Load buffer
+        lea statement_list_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+        mov %edx,  8(%rax, %rbx)
+        mov %ecx, 12(%rax, %rbx)
 
+        pop %rax # Restore descriptor
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (statement_list_offset)(%rip)
 
+        leave
+        ret
 
 // in rdi: identifier_descriptor
 // in rsi: expr_id
@@ -300,6 +353,38 @@ construct_binary_op_node:
 // in rdi: Token descriptor
 // out 16(%rbp): lhs id
 // out 24(%rbp): lhs descriptor
+// out 32(%rbp): rhs id
+// out 40(%rbp): rhs descriptor
+.type retrieve_statement_list, @function
+.global retrieve_statement_list
+retrieve_statement_list:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $16, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea statement_list_buffer(%rip), %rax
+        
+        mov   (%rax, %rbx), %edi # lhs id
+        mov  4(%rax, %rbx), %esi # lhs desc
+        mov  8(%rax, %rbx), %edx # rhs id
+        mov 12(%rax, %rbx), %ecx # rhs desc
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+        mov %edx, 32(%rbp)
+        mov %ecx, 40(%rbp)
+
+        leave
+        ret
+
+
+
+// in rdi: Token descriptor
+// out 16(%rbp): lhs id
+// out 24(%rbp): lhs descriptor
 // out 32(%rbp): operator id
 // out 40(%rbp): rhs id
 // out 48(%rbp): rhs descriptor
@@ -341,7 +426,7 @@ retrieve_assignment:
         push %rbp
         mov %rsp, %rbp 
         mov %rdi, %rax
-        movq $20, %rdx
+        movq $12, %rdx
         mulq %rdx
         mov %rax, %rbx
 
@@ -377,6 +462,8 @@ push_token_descriptor:
         leave
         ret
 
+
+
 .type current_token_id, @function
 current_token_id:
         push %rbp
@@ -393,12 +480,36 @@ current_token_data:
         leave
         ret
 
+.type peek_token_id, @function
+peek_token_id:
+        push %rbp
+        mov %rsp, %rbp
+        mov _peek_token_id_(%rip), %eax
+        leave
+        ret
+
+.type peek_token_data, @function
+peek_token_data:
+        push %rbp
+        mov %rsp, %rbp
+        mov _peek_data_(%rip), %eax
+        leave
+        ret
+
 .type next_token, @function
 next_token:
         push %rbp
         mov %rsp, %rbp
+        # Move peek into current
+        call peek_token_id
+        mov %eax, %edi
+        call push_token_id
+        call peek_token_data
+        mov %eax, %edi
+        call push_token_descriptor
+
         callq get_token
-        mov %eax, _current_token_id_(%rip)
+        mov %eax, _peek_token_id_(%rip)
         cmp $25, %rax
         je set_descriptor
         cmp $24, %rax
@@ -406,6 +517,6 @@ next_token:
         leave
         ret
     set_descriptor:
-        mov %ebx, _token_data_(%rip)
+        mov %ebx, _peek_data_(%rip)
         leave
         ret

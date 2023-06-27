@@ -320,16 +320,56 @@ print_number:
 
     movq %rbx, %rdi
     callq retrieve_number
+    movq %rax, %rdi
     
-    // Count the length of the number
+    push %rbp
+        mov %rsp, %rbp
+        # Because syscalls are slow, we will opt to first count the length of the number. And then print it. This means we will iterate over it twice
 
+        movq %rdi, %rax
+        xor %rcx, %rcx # Counter
+        movq $10, %rbx
+    begin_count:
+        cqto
+        idivq %rbx
+        inc %rcx
+        test %rax, %rax
+        jnz begin_count
 
-    // movq $1, %rax
-    // movq $1, %rdi
-    // leaq token_number, %rsi
-    // movq $5, %rdx
-    // syscall
-    // callq println
+        # We will now pack the numbers in a char * We must remember that the stack grows negative. For that reason we will need to push it in reverse order on the stack in order for the write syscall to not print in reverse.
+
+        # Make room on the stack for char *
+        subq %rcx, %rsp
+        # Ensure correct alignment
+        // 4 - (rcx % 4) = correction
+        movq %rcx, %rax
+        cqto
+        movq $4, %rbx
+        idivq %rbx 
+        # We now have the remainder in %rdx
+        subq %rdx, %rbx # This is the correction amount
+        subq %rbx, %rsp
+        # We now have correct alignment
+        movq $10, %rbx
+        movq %rcx, %r8 # Store the count
+        movq %rdi, %rax
+        # Push the char * to stack
+    begin_push:
+        cqto
+        idivq %rbx
+        addb $48, %dl
+        dec %r8
+        movb %dl, (%rsp, %r8, 1)
+        test %r8, %r8
+        jnz begin_push
+
+        movq $1, %rax
+        movq $1, %rdi
+        leaq (%rsp), %rsi
+        movq %rcx, %rdx
+        syscall
+        leave
+    callq println
     jmp _llopers
 
 

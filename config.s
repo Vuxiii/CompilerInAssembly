@@ -15,7 +15,7 @@
         input_buffer: .space 30
 .global in
         // in:         .asciz "William EOP"
-        in:         .asciz "a = 4 + 6 EOP"
+        in:         .asciz "a = 4 + 6 b = 42 + 69 EOP"
         // in:         .asciz "= def == ( ) if { } [] print while +- /    * < > && let || willi EOP"
         // in:         .asciz "def if = == ( ) { } [] print while +- /    * < > && let || 12 ass EOP"
 
@@ -74,7 +74,7 @@
 .global token_identifier
         token_identifier: .asciz ""      # 24
 .global token_number
-        token_number:     .asciz ""      # 25
+        token_number:     .asciz ""     # 25
 
 .global number_0
         number_0:   .asciz "0" # value: 48

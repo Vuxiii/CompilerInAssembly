@@ -65,7 +65,7 @@ emit:
 
         pop %rsi
         pop %rdi
-        callq check_statement
+        callq visit_statement
 
         callq emit_asm_epilogue
 
@@ -74,14 +74,38 @@ emit:
 
 // in rdi: Token id
 // in rsi: Token descriptor
-.type check_statement, @function
-check_statement:
+.type visit_statement, @function
+visit_statement:
         push %rbp
         mov %rsp, %rbp
 
         cmp $29, %rdi
-        jne not_assignment
+        je assignment
+        cmp $28, %rdi
+        je statement_list
 
+        leave
+        ret
+
+    statement_list:
+
+        movq %rsi, %rdi
+        push $696969
+        push $696969
+        push $696969
+        push $696969
+        call retrieve_statement_list
+        # LHS
+        pop %rdi
+        pop %rsi
+        call visit_statement
+        pop %rdi
+        pop %rsi
+        call visit_statement
+        leave
+        ret
+
+    assignment:
         // subq $24, %rsp
         push $696969
         push $696969
@@ -93,17 +117,15 @@ check_statement:
         pop %rsi # expr descriptor
         push %rax # Store the descripor for the identifier
 
-        callq check_expression
+        callq visit_expression
 
-    not_assignment:
         leave
         ret
 
-
 // in rdi: Token id
 // in rsi: Token descriptor
-.type check_expression, @function
-check_expression:
+.type visit_expression, @function
+visit_expression:
         push %rbp
         mov %rsp, %rbp
 
@@ -132,15 +154,15 @@ check_expression:
         pop %rdi # lhs id
         pop %rsi # lhs descriptor
 
-        callq check_expression
+        callq visit_expression
 
         # Evaluate the RHS
 
-        pop %rdx # operator id
-        pop %rdi # rhs id
+        pop %rdx  # operator id
+        pop %rdi  # rhs id
         pop %rsi  # rhs descriptor 
         push %rdx # Store operator
-        callq check_expression
+        callq visit_expression
 
         # Both children have now been evaluated
         callq emit_pop
