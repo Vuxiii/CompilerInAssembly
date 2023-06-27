@@ -15,7 +15,8 @@
         input_buffer: .space 30
 .global in
         // in:         .asciz "William EOP"
-        in:         .asciz "a = 4 + 6 b = 42 + 69 EOP"
+        in:         .asciz "def main() { a = 4 + 6 } e = 5 + 6 EOP"
+        // in:         .asciz "a = 4 + 6 b = 42 + 69 EOP"
         // in:         .asciz "= def == ( ) if { } [] print while +- /    * < > && let || willi EOP"
         // in:         .asciz "def if = == ( ) { } [] print while +- /    * < > && let || 12 ass EOP"
 
@@ -89,7 +90,7 @@
         _emit_function_prologue:  .asciz "\n\tpush %rbp\n\tmov %rsp, %rbp\n"
 
 .global _emit_function_epilogue
-        _emit_function_epilogue:  .asciz "\n\tleave\n\tret"
+        _emit_function_epilogue:  .asciz "\n\tleave\n\tret\n"
 
 .global _emit_asm_epilogue
         _emit_asm_epilogue:       .asciz "\n\tleave\n\tmovq $60, %rax\n\tmovq $0, %rdi\n\tsyscall\n"
@@ -141,5 +142,7 @@
         _emit_colon: .asciz ":"
 .global _emit_dollar
         _emit_dollar: .asciz "$"
+.global _emit_newline
+        _emit_newline: .asciz "\n"
 .global _emit_newline_tab
         _emit_newline_tab: .asciz "\n\t"

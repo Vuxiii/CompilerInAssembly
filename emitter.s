@@ -60,14 +60,14 @@ emit:
         mov %rsp, %rbp 
         push %rdi
         push %rsi
-        callq emit_asm_prologue
-        callq emit_function_prologue
+        // callq emit_asm_prologue
+        // callq emit_function_prologue
 
         pop %rsi
         pop %rdi
         callq visit_statement
 
-        callq emit_asm_epilogue
+        // callq emit_asm_epilogue
 
         leave
         ret
@@ -83,10 +83,41 @@ visit_statement:
         je assignment
         cmp $28, %rdi
         je statement_list
-
+        cmp $30, %rdi
+        je function
         leave
         ret
 
+    function:
+        movq %rsi, %rdi
+        push $696969
+        push $696969
+        push $696969
+        push $696969
+        push $696969
+        call retrieve_function
+        
+        call emit_newline
+
+        pop %rdi # Identifier
+        call emit_identifier
+        call emit_colon
+        call emit_function_prologue        
+        pop %rsi # body id
+        pop %rdx # body descriptor
+        pop %rcx # var count
+        pop %r8  # symbol_table offset
+
+
+
+        movq %rsi, %rdi
+        movq %rdx, %rdi
+        call visit_statement
+        
+        call emit_function_epilogue
+
+        leave
+        ret
     statement_list:
 
         movq %rsi, %rdi
@@ -293,7 +324,7 @@ emit_function_epilogue:
         movq $1, %rax
         movq $1, %rdi
         leaq _emit_function_epilogue, %rsi
-        movq $12, %rdx
+        movq $13, %rdx
         syscall
         leave
         ret
@@ -539,6 +570,17 @@ emit_dollar:
         syscall
         leave
         ret
+.type emit_newline, @function
+emit_newline:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_newline, %rsi
+        movq $1, %rdx
+        syscall
+        leave
+        ret
 .type emit_newline_tab, @function
 emit_newline_tab:
         push %rbp
@@ -547,6 +589,27 @@ emit_newline_tab:
         movq $1, %rdi
         leaq _emit_newline_tab, %rsi
         movq $2, %rdx
+        syscall
+        leave
+        ret
+// in rdi: string descriptor
+.type emit_identifier, @function
+emit_identifier:
+        push %rbp
+        mov %rsp, %rbp
+        call retrieve_identifier
+        xor %rcx, %rcx
+
+    count_len:
+        movb (%rax, %rcx, 1), %bl
+        inc %rcx
+        test %bl, %bl
+        jnz count_len
+
+        movq %rax, %rsi
+        movq $1, %rax
+        movq $1, %rdi
+        movq %rcx, %rdx
         syscall
         leave
         ret

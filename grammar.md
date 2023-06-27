@@ -44,7 +44,16 @@ arg_list   : expression
            | expression ',' arg_list
 ```
 
-## Data structure
+## Symbol Collection & Stack Offsets
+
+In order to determine where each variable should should be placed on the stack, I need to make a method that traverses the AST and looks for all the functions. This way, I can count how many variables are needed for each function.
+
+1. Traverse the AST to count the number of functions.
+2. Each function is identified by the arrival time.
+3. Traverse AST again: For each function, index into a buffer and count how many variables are needed.
+4. Make a lookup table for each function. Given a variable/identifier, it should return the stack position for that function.
+
+## Data structures
 
 (struct name):   (type)
 
@@ -78,6 +87,17 @@ assignment:      descriptor
     identifier:  descriptor
     expr->type:  token_id
     expr:        descriptor
+
+function:        descriptor
+    type: 30
+    identifier:  descriptor
+    body->type:  token_id
+    body:        descriptor
+    var_count:   int
+    symbol_table:descriptor
+
+function_list_buffer: size = 20
+    [(identifier, body_id, body_descriptor, var_count, symbol_table),...]
 
 statement_list_buffer: size = 16
     [(lhs_id, lhs_descriptor, rhs_id, rhs_descriptor),...]

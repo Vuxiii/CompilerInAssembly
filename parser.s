@@ -25,6 +25,10 @@ _peek_token_id_:                .int 0
 _token_data_:                   .int 0
 _peek_data_:                    .int 0
 
+
+
+.global function_buffer
+        function_buffer:        .space 256
 .global statement_list_buffer
         statement_list_buffer:  .space 256
 .global assignment_buffer
@@ -34,6 +38,8 @@ _peek_data_:                    .int 0
 binary_op_offset:               .int 0
 assignment_offset:              .int 0
 statement_list_offset:          .int 0
+function_offset:                .int 0
+
 
 .section .text
 
@@ -63,8 +69,74 @@ parse_statement:
         # Check if we have an identifier
         # statement ::= 'identifier' '=' expression
         cmp $24, %rax
-        jne node_is_not_statement
+        je maybe_assignment
+        cmp $1, %rax
+        je function_statement
 
+
+        jmp node_is_not_statement
+
+    function_statement:
+
+        # eat the def
+        call next_token
+        # Do we have an identifier?
+        call peek_token_id
+        cmp $24, %rax
+        jne node_is_not_statement # Parse error!
+
+        # We have an identifier
+        # Check for '(' ')'
+        # Currently no args
+
+        call next_token
+        # Store the identifier descriptor
+        call current_token_data
+        push %rax # Store identifier
+
+        call peek_token_id
+        cmp $5, %rax # '('
+        jne node_is_not_statement # Parse error!
+        call next_token
+        
+        call peek_token_id
+        cmp $6, %rax # ')'
+        jne node_is_not_statement # Parse error!
+        call next_token
+        
+        call peek_token_id
+        cmp $7, %rax # '{'
+        jne node_is_not_statement # Parse Error! Expected token: '{'
+        call next_token 
+
+        # Try to parse the statement
+        call parse_statement
+        cmp $0, %rax
+        je node_is_not_statement # Parse Error. No Statement present
+        
+        push %rax # Store
+        push %rbx # Store
+
+        # Check '}'
+        call peek_token_id
+        cmp $8, %rax
+        jne node_is_not_statement # Parse error! Expected token: '}'
+
+        # Remove the '}'
+        call next_token
+
+        # We have a good function. Construct it and return
+
+        pop %rsi # body descriptor
+        pop %rdx # body id
+        pop %rdi # identifier descriptor
+        call construct_function_node
+        push $30
+        push %rax
+
+        jmp check_statement_list
+
+    maybe_assignment:
         // Check the assignment '='
         call next_token
         # current_token_id: identifier
@@ -128,21 +200,6 @@ parse_statement:
         # Store results
         pop %rbx # Descriptor
         pop %rax # Token ID
-        // push %rax
-        // push %rbx
-        // movq %rbx, %rdi
-        // call push_token_descriptor
-        
-        // pop %rbx # Descriptor
-        // pop %rax # Token ID
-        // push %rax
-        // push %rbx
-        // movq %rax, %rdi
-        // call push_token_id
-
-        # Ensure correct return values
-        // pop %rbx # Descriptor
-        // pop %rax # Token ID
         leave
         ret
 
@@ -206,7 +263,7 @@ parse_expression:
 
         # Need some logic for handling precedence
 
-        callq parse_expression
+        call parse_expression
         # rax should contain the token_id
         # rbx should contain the descriptor
         
@@ -228,16 +285,17 @@ parse_expression:
         pop %r8
         pop %rcx
         call construct_binary_op_node
-        movq %rax, %rdi 
-        call push_token_descriptor
-        movq $26, %rdi
-        call push_token_id
-        mov %eax, %edi
+        movq %rax, %rbx 
+        movq $26, %rax
+        // call push_token_descriptor
+        // movq $26, %rdi
+        // call push_token_id
+        // mov %eax, %edi
 
-        # Ensure correct return values
-        call current_token_data
-        movq %rax, %rbx
-        call current_token_id
+        // # Ensure correct return values
+        // call current_token_data
+        // movq %rax, %rbx
+        // call current_token_id
         leave
         ret
 
@@ -350,6 +408,43 @@ construct_binary_op_node:
         leave
         ret
 
+
+// in rdi: identifier
+// in rsi: body id
+// in rdx: body descriptor
+// out:    function descriptor
+.type construct_function_node, @function
+construct_function_node:
+        push %rbp
+        mov %rsp, %rbp 
+        xor %rbx, %rbx
+        xor %rax, %rax
+        mov function_offset(%rip), %eax
+        push %rax # Store so we can return the descriptor
+        # Ensure that we are offset by the correct size of each struct -> ebx * sizeof(binaryop) -> ebx * 20 bytes
+        push %rdx # mulq uses rdx...
+        movq $20, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+        pop %rdx
+    // p (int[5])*0x202fee
+        lea function_buffer(%rip), %rax
+        
+        mov %edi,  (%rax, %rbx)
+        mov %esi, 4(%rax, %rbx)
+        mov %edx, 8(%rax, %rbx)
+        movl $0,  12(%rax, %rbx)
+        movl $0,  16(%rax, %rbx)
+        
+        pop %rax # Restore descriptor
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (function_offset)(%rip)
+
+        leave
+        ret
+
 // in rdi: Token descriptor
 // out 16(%rbp): lhs id
 // out 24(%rbp): lhs descriptor
@@ -415,6 +510,38 @@ retrieve_binary_op:
         leave
         ret
 
+// in rdi: Token descriptor
+// out 16(%rbp): identifier
+// out 24(%rbp): body id
+// out 32(%rbp): body descriptor
+// out 40(%rbp): variable count int
+// out 48(%rbp): symbol table descriptor
+.type retrieve_function, @function
+.global retrieve_function
+retrieve_function:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $20, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea function_buffer(%rip), %rax
+        
+        mov   (%rax, %rbx), %edi # identifier
+        mov  4(%rax, %rbx), %esi # body id
+        mov  8(%rax, %rbx), %edx # body descriptor
+        mov 12(%rax, %rbx), %ecx # variable count int
+        mov 16(%rax, %rbx), %r8d # symbol table descriptor
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+        mov %edx, 32(%rbp)
+        mov %ecx, 40(%rbp)
+        mov %r8d, 48(%rbp)
+
+        leave
+        ret
 
 // in rdi: token descriptor
 // out  4(%rbp): identifier descriptor
