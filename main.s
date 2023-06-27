@@ -43,6 +43,11 @@ _start:
     callq parse
     movq %rax, %rdi
     movq %rbx, %rsi
+    push %rdi
+    push %rsi
+    call collect
+    pop %rsi
+    pop %rdi
     callq emit
     jmp end_start
 // ignore below for now.
