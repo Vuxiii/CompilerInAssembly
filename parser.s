@@ -38,7 +38,8 @@ _peek_data_:                    .int 0
 binary_op_offset:               .int 0
 assignment_offset:              .int 0
 statement_list_offset:          .int 0
-function_offset:                .int 0
+.global function_offset
+        function_offset:        .int 0
 
 
 .section .text
