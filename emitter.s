@@ -90,19 +90,20 @@ visit_statement:
 
     function:
         movq %rsi, %rdi
+        call set_current_function
         push $696969
         push $696969
         push $696969
         push $696969
         push $696969
         call retrieve_function
-        
+
         call emit_newline
 
         pop %rdi # Identifier
         call emit_identifier
         call emit_colon
-        call emit_function_prologue        
+        call emit_function_prologue
         pop %rsi # body id
         pop %rdx # body descriptor
         pop %rcx # var count
@@ -111,7 +112,7 @@ visit_statement:
 
 
         movq %rsi, %rdi
-        movq %rdx, %rdi
+        movq %rdx, %rsi
         call visit_statement
         
         call emit_function_epilogue
@@ -149,6 +150,15 @@ visit_statement:
         push %rax # Store the descripor for the identifier
 
         callq visit_expression
+
+        call emit_newline_tab
+        call emit_colon
+
+        pop %rdi
+        call get_offset_on_stack
+        movq %rax, %rdi
+        call emit_number
+        call emit_colon
 
         leave
         ret

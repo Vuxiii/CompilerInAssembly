@@ -128,8 +128,8 @@ parse_statement:
 
         # We have a good function. Construct it and return
 
-        pop %rsi # body descriptor
-        pop %rdx # body id
+        pop %rdx # body descriptor
+        pop %rsi # body id
         pop %rdi # identifier descriptor
         call construct_function_node
         push $30
@@ -431,9 +431,9 @@ construct_function_node:
     // p (int[5])*0x202fee
         lea function_buffer(%rip), %rax
         
-        mov %edi,  (%rax, %rbx)
-        mov %esi, 4(%rax, %rbx)
-        mov %edx, 8(%rax, %rbx)
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+        mov %edx,  8(%rax, %rbx)
         movl $0,  12(%rax, %rbx)
         movl $0,  16(%rax, %rbx)
         

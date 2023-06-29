@@ -1,3 +1,4 @@
+.section .data
 .global symbol_buffer
         symbol_buffer:          .space 256
 .global symbol_offset
@@ -8,7 +9,9 @@
 
 
 _current_symbol_count_:         .int 0
-current_function:               .int 0
+_current_function:              .int 0
+
+
 .section .text
 
 .type collect, @function
@@ -16,24 +19,31 @@ current_function:               .int 0
 collect:
         push %rbp
         mov %rsp, %rbp
+        lea symbol_buffer(%rip), %rax
+
         # We want to iterate over each  funciton. This can be done by iterating over the function_buffer.
         xor %rcx, %rcx
         mov function_offset(%rip), %ecx # Total amount of functions
-
         xor %rbx, %rbx
     loop_begin:
         dec %rcx
         push %rcx
         push %rbx
-        movl %ebx, current_function(%rip)
+        mov %ebx, (_current_function)(%rip)
+        mov %ebx, %edi
+        call set_symbol_table
         call reset_symbol_count
+        pop %rbx
         movq %rbx, %rdi
+        push %rbx
         call visit_function
-        
         pop %rbx
         pop %rcx
         inc %rbx
+        test %rcx, %rcx
         jnz loop_begin
+
+        # Now we should have the offsets on the stack for each variable. Let us test it
 
         leave
         ret
@@ -100,19 +110,27 @@ visit_function:
 
 .type assignment, @function
 assignment:
+        push %rbp
+        mov %rsp, %rbp
         # Check if we already have seen this assignment
         # If yes: return
         # If no: increase var count. Find place on stack for var
+        movq %rsi, %rdi
+        # Extract the identifier from the assignment
+        push $696969
+        push $696969
+        push $696969
+        call retrieve_assignment
+        pop %rdi # identifier
+        subq $8, %rsp
 
         cmp $0, %r15 # If 0 it's the first symbol in this function
         jne offset_is_set
         inc %r15 # It is now set
 
         # Set offset
-        # descriptor - 4 (4 to ensure the offset is not overwritten)
+        # descriptor
         push %rdi
-        subq $4, %rsi
-        movq %rsi, %rdi
         call set_offset
         jmp new_symbol # We know this is a new symbol
     offset_is_set:
@@ -143,12 +161,28 @@ set_offset_on_stack:
         xor %rax, %rax
         call get_offset
         movq %rax, %rcx
+        push %rcx
         call get_symbol_table
+        pop %rcx
         pop %rdi
-
-        subq %rcx, %rdi
-        addq %rdi, %rax
         push %rax
+        subq %rcx, %rdi
+        # Multiply this number by sizeof(int) = 4
+        movq $4, %rdx
+        movq %rdi, %rax
+        imulq %rdx
+        movq %rax, %rdi
+
+        pop %rax
+        addq %rdi, %rax
+
+
+        # Update the offset into the symbol table.
+        push %rdi
+        addl $8, %edi
+        movl %edi, (symbol_offset)(%rip)
+        pop %rdi
+        push %rax   
         call get_symbol_count
         movq %rax, %rdi
         pop %rax
@@ -159,6 +193,7 @@ set_offset_on_stack:
         ret
 
 // in rdi: the descriptor of the identifier
+.global get_offset_on_stack
 .type get_offset_on_stack, @function
 get_offset_on_stack:
         push %rbp
@@ -167,10 +202,21 @@ get_offset_on_stack:
         xor %rax, %rax
         call get_offset
         movq %rax, %rcx
+        push %rcx
         call get_symbol_table
+        pop %rcx
         pop %rdi
 
+        push %rax
         subq %rcx, %rdi
+        # Multiply this number by sizeof(int) = 4
+        movq $4, %rdx
+        movq %rdi, %rax
+        imulq %rdx
+        movq %rax, %rdi
+
+        pop %rax
+
         addq %rdi, %rax
         
         movl (%rax), %eax
@@ -202,8 +248,9 @@ get_symbol_table:
         mov %rsp, %rbp
 
         xor %rax, %rax
-        movl current_function(%rip), %eax
+        movl _current_function(%rip), %eax
         movq $20, %rdx
+        mulq %rdx
         mov %rax, %rbx # Offset
         lea function_buffer(%rip), %rax
         xor %rcx, %rcx
@@ -215,7 +262,38 @@ get_symbol_table:
         leave
         ret
 
+// in rdi: Function descriptor
+.type set_symbol_table, @function
+set_symbol_table:
+        push %rbp
+        mov %rsp, %rbp
+        xor %rax, %rax
+        movl %edi, %eax
+        movq $20, %rdx
+        mulq %rdx
+        mov %rax, %rbx # Offset
+        lea function_buffer(%rip), %rax
+        movl symbol_offset(%rip), %ecx
+        movl %ecx, 16(%rax, %rbx) # Set the symbol table descriptor
+
+        leave
+        ret
+
+// in rdi: function descriptor
+.global set_current_function
+.type set_current_function, @function
+set_current_function:
+        push %rbp
+        mov %rsp, %rbp
+
+        mov %rdi, (_current_function)(%rip)
+
+        leave
+        ret
+
+
 // in edi: The offset to subtract on each lookup
+// This method also updates the symbol table pointer for the function
 .type set_offset, @function
 set_offset:
         push %rbp
@@ -255,7 +333,7 @@ reset_symbol_count:
         ret
 
 
-.type increate_symbol_count, @function
+.type increase_symbol_count, @function
 increase_symbol_count:
         push %rbp
         mov %rsp, %rbp
