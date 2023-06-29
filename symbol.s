@@ -127,32 +127,48 @@ assignment:
         push $696969
         call retrieve_assignment
         pop %rdi # identifier
-        subq $8, %rsp
-
-        cmp $0, %r15 # If 0 it's the first symbol in this function
-        jne offset_is_set
-        inc %r15 # It is now set
-
-        # Set offset
-        # descriptor
-        push %rdi
-        call set_offset
-        jmp new_symbol # We know this is a new symbol
-    offset_is_set:
-        push %rdi
-        # Check if we already have this symbol
-        call is_symbol_registered
-        cmp $0, %rax
-        je new_symbol
+        call set_offset_on_stack
         leave
         ret
 
-    new_symbol:
-        call increase_symbol_count
-        # Give the symbol an offset
+// in rdi:  identifier descriptor
+// out rax: pointer to struct { char *, int offset}
+// This method returns either the position in the symbol_buffer or an empty spot if the identifier hasn't been inserted yet.
+.type locate_symbol, @function
+locate_symbol:
+        push %rbp
+        mov %rsp, %rbp
+        call retrieve_identifier
+        push %rax
+        call get_symbol_table
+        xor %rcx, %rcx # Is the index into rax
+        xor %rdx, %rdx # Is the index into rdi
         pop %rdi
-        call set_offset_on_stack
+        
+        # rdi stores the variable
+        # rsi is the symbol_buffer
+        # first 8 bytes is the pointer
+        # next 4 bytes is the offset
+    locate_symbol_loop_begin:
+        movq (%rax), %rsi
+        # if rsi is 0, then it was not found
+        cmp $0, %rsi
+        je return_empty_spot
+        push %rdi
+        push %rax
+        call cmp_string
+        cmp $1, %rax
+        je symbol_located
+        pop %rax
+        pop %rdi
+        addq $12, %rax
+        jmp locate_symbol_loop_begin
 
+    return_empty_spot:
+        leave
+        ret
+    symbol_located:
+        pop %rax
         leave
         ret
 
@@ -161,39 +177,25 @@ assignment:
 set_offset_on_stack:
         push %rbp
         mov %rsp, %rbp
-
+        # We can use the fact that locate_symbol returns an empty spot if it doesn't exist in the table
         push %rdi
-        xor %rax, %rax
-        call get_offset
-        movq %rax, %rcx
-        push %rcx
-        call get_symbol_table
-        pop %rcx
+        call locate_symbol
         pop %rdi
+
+        # Check if it already is in there.
+        cmp $0, (%rax)
+        jne already_inserted
+
+        call increase_symbol_count
         push %rax
-        subq %rcx, %rdi
-        # Multiply this number by sizeof(int) = 4
-        movq $4, %rdx
-        movq %rdi, %rax
-        imulq %rdx
+        call retrieve_identifier
         movq %rax, %rdi
-
         pop %rax
-        addq %rdi, %rax
-
-
-        # Update the offset into the symbol table.
-        push %rdi
-        addl $8, %edi # Ensure we get past the last offset!
-        movl %edi, (symbol_offset)(%rip)
-        pop %rdi
-        push %rax   
+        movq %rdi, (%rax)
+        movq %rax, %rbx
         call get_symbol_count
-        movq %rax, %rdi
-        pop %rax
-        
-        movl %edi, (%rax)
-
+        movl %eax, 8(%rbx)
+    already_inserted:
         leave
         ret
 
@@ -203,28 +205,9 @@ set_offset_on_stack:
 get_offset_on_stack:
         push %rbp
         mov %rsp, %rbp
-        push %rdi
-        xor %rax, %rax
-        call get_offset
-        movq %rax, %rcx
-        push %rcx
-        call get_symbol_table
-        pop %rcx
-        pop %rdi
-
-        push %rax
-        subq %rcx, %rdi
-        # Multiply this number by sizeof(int) = 4
-        movq $4, %rdx
-        movq %rdi, %rax
-        imulq %rdx
-        movq %rax, %rdi
-
-        pop %rax
-
-        addq %rdi, %rax
         
-        movl (%rax), %eax
+        call locate_symbol
+        movl 8(%rax), %eax
         cltq # Sign extend. (remove the top 32 bits rax)
         leave
         ret
@@ -235,8 +218,8 @@ get_offset_on_stack:
 is_symbol_registered:
         push %rbp
         mov %rsp, %rbp
-        call get_offset_on_stack
-        cmp $0, %rax
+        call locate_symbol
+        cmp $0, (%rax)
         jg true
         movq $0, %rax
         leave
@@ -263,7 +246,7 @@ get_symbol_table:
 
         lea symbol_buffer(%rip), %rax
         addq %rcx, %rax
-        addq $4, %rax
+        # addq $4, %rax
         leave
         ret
 
@@ -297,7 +280,7 @@ set_symbol_count:
         call get_symbol_count
         mov %eax, %ecx
         lea function_buffer(%rip), %rax
-        movl %ecx, 12(%rax, %rbx) # Set the symbol table descriptor
+        movl %ecx, 12(%rax, %rbx)
 
         leave
         ret
@@ -315,26 +298,6 @@ set_current_function:
         ret
 
 
-// in edi: The offset to subtract on each lookup
-// This method also updates the symbol table pointer for the function
-.type set_offset, @function
-set_offset:
-        push %rbp
-        mov %rsp, %rbp
-        call get_symbol_table
-        movl %edi, -4(%rax)
-        leave
-        ret
-
-// out rax: The offset to subtract on each lookup
-.type get_offset, @function
-get_offset:
-        push %rbp
-        mov %rsp, %rbp
-        call get_symbol_table
-        movl -4(%rax), %eax
-        leave
-        ret
 // out eax: The current symbol count
 .type get_symbol_count, @function
 get_symbol_count:

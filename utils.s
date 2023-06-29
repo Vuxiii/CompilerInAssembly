@@ -94,7 +94,6 @@ cmp_string_:
     cmp $0, %al 
     jne cmp_string_false
 
-
     inc %rdi
     inc %rsi
     // Go to next byte

@@ -53,6 +53,13 @@ In order to determine where each variable should should be placed on the stack, 
 3. Traverse AST again: For each function, index into a buffer and count how many variables are needed.
 4. Make a lookup table for each function. Given a variable/identifier, it should return the stack position for that function.
 
+The symbol table could just be a copy of the lexed-tokens followed by the index. This gives `O(n)` runtime to find the offset, where `n` is the sum of the length of all identifiers. Might be okay for few identifiers. Remember, identifiers are local to each function. However, the table will explode in size.
+
+Better idéa, Just have a pointer followed by an integer representing the offset..... Much better lmao. -.- Sometimes I really need to use ma brain.
+
+symbol_buffer:
+    [(char *, uint),...]
+
 ## Data structures
 
 (struct name):   (type)
