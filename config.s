@@ -6,7 +6,7 @@
         number_tokens:     .space 256 # These number tokens can be indexed into. Each number spans 4 bytes (32 bit)
 
 .global identifier_tokens
-        identifier_tokens: .space 256 # These identifier tokens can be index into. Each identifier is terminated with a '\0' null char
+        identifier_tokens: .space 256 # These identifier tokens can be indexed into. Each identifier is terminated with a '\0' null char
 
 .global buffer_address
         buffer_address:    .quad 0 # Current offset into the buffer. Should be set at startup.
@@ -22,7 +22,7 @@
         // in:         .asciz "def if = == ( ) { } [] print while +- /    * < > && let || 12 ass EOP"
 
 .global newline
-        newline:    .asciz "\n"
+        newline:          .asciz "\n"
 .global token_eop
         token_eop:        .asciz "EOP"   # -1
 .global token_none

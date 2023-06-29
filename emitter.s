@@ -160,13 +160,13 @@ visit_statement:
         push $696969
         push $696969
         movq %rsi, %rdi
-        callq retrieve_assignment
+        call retrieve_assignment
         pop %rax
         pop %rdi # expr id
         pop %rsi # expr descriptor
         push %rax # Store the descripor for the identifier
 
-        callq visit_expression
+        call visit_expression
 
         call emit_newline_tab
 

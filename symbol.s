@@ -366,4 +366,3 @@ increase_symbol_count:
         pop %rax
         leave
         ret
-
