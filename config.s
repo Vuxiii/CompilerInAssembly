@@ -15,7 +15,7 @@
         input_buffer: .space 30
 .global in
         // in:         .asciz "William EOP"
-        in:         .asciz "def main() { abekat = 2 + 3 set = 4 + 9 } def anoter_func() { zeal = 3 + 3 asd = 3 + 4 sdfg =  32  + 5 } EOP"
+        in:         .asciz "def main() { var1 = 2 + 3 var2 = 4 + 9 } def anoter_func() { zeal = 3 + 3 asd = 3 + 4 sdfg =  32  + 5 } EOP"
         // in:         .asciz "def main() { a = 4 + 6 } def another_function() { b = 1 + 9 e = 5 + 6 } EOP"
         // in:         .asciz "a = 4 + 6 b = 42 + 69 EOP"
         // in:         .asciz "= def == ( ) if { } [] print while +- /    * < > && let || willi EOP"
@@ -101,6 +101,8 @@
         _emit_push: .asciz "\n\tpush "
 .global _emit_pop
         _emit_pop: .asciz "\n\tpop "
+.global _emit_mov
+        _emit_mov: .asciz "\n\tmovq "
 .global _emit_add
         _emit_add: .asciz "\n\taddq "
 .global _emit_sub
@@ -135,6 +137,10 @@
         _emit_rdi: .asciz "%rdi"
 .global _emit_rsi
         _emit_rsi: .asciz "%rsi"
+.global _emit_rbp
+        _emit_rbp: .asciz "%rbp"
+.global _emit_rsp
+        _emit_rsp: .asciz "%rsp"
 
 # --[ Misc ]--
 .global _emit_comma
@@ -143,6 +149,12 @@
         _emit_colon: .asciz ":"
 .global _emit_dollar
         _emit_dollar: .asciz "$"
+.global _emit_minus
+        _emit_minus: .asciz "-"
+.global _emit_lparen
+        _emit_lparen: .asciz "("
+.global _emit_rparen
+        _emit_rparen: .asciz ")"
 .global _emit_newline
         _emit_newline: .asciz "\n"
 .global _emit_newline_tab

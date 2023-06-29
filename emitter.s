@@ -104,12 +104,29 @@ visit_statement:
         call emit_identifier
         call emit_colon
         call emit_function_prologue
+        
+        # Make place for local vars on the stack
+        call emit_sub
+        call emit_dollar
+
         pop %rsi # body id
         pop %rdx # body descriptor
-        pop %rcx # var count
+        pop %rax # var count
+        push %rdx
+        push %rsi
+
+        movq $8, %rdx
+        imulq %rdx
+        movq %rax, %rdi
+        call emit_number
+        call emit_comma
+        call emit_rsp
+        
+        
+        pop %rsi
+        pop %rdx
         pop %r8  # symbol_table offset
-
-
+        
 
         movq %rsi, %rdi
         movq %rdx, %rsi
@@ -152,13 +169,27 @@ visit_statement:
         callq visit_expression
 
         call emit_newline_tab
-        call emit_colon
+
+        call emit_pop
+        call emit_rax
+
+        call emit_mov
+        call emit_rax
+        call emit_comma
+        call emit_minus
 
         pop %rdi
         call get_offset_on_stack
+
+        movq $8, %rdx
+        imulq %rdx
+
         movq %rax, %rdi
         call emit_number
-        call emit_colon
+
+        call emit_lparen
+        call emit_rbp
+        call emit_rparen
 
         leave
         ret
@@ -371,6 +402,17 @@ emit_pop:
         syscall
         leave
         ret
+.type emit_mov, @function
+emit_mov:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_mov, %rsi
+        movq $7, %rdx
+        syscall
+        leave
+        ret
 .type emit_add, @function
 emit_add:
         push %rbp
@@ -547,6 +589,28 @@ emit_rsi:
         syscall
         leave
         ret
+.type emit_rbp, @function
+emit_rbp:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_rbp, %rsi
+        movq $4, %rdx
+        syscall
+        leave
+        ret
+.type emit_rsp, @function
+emit_rsp:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_rsp, %rsi
+        movq $4, %rdx
+        syscall
+        leave
+        ret
 .type emit_comma, @function
 emit_comma:
         push %rbp
@@ -576,6 +640,39 @@ emit_dollar:
         movq $1, %rax
         movq $1, %rdi
         leaq _emit_dollar, %rsi
+        movq $1, %rdx
+        syscall
+        leave
+        ret
+.type emit_minus, @function
+emit_minus:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_minus, %rsi
+        movq $1, %rdx
+        syscall
+        leave
+        ret
+.type emit_lparen, @function
+emit_lparen:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_lparen, %rsi
+        movq $1, %rdx
+        syscall
+        leave
+        ret
+.type emit_rparen, @function
+emit_rparen:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_rparen, %rsi
         movq $1, %rdx
         syscall
         leave

@@ -37,6 +37,11 @@ collect:
         movq %rbx, %rdi
         push %rbx
         call visit_function
+
+        movl (_current_function)(%rip), %edi
+        call set_symbol_count
+
+
         pop %rbx
         pop %rcx
         inc %rbx
@@ -179,7 +184,7 @@ set_offset_on_stack:
 
         # Update the offset into the symbol table.
         push %rdi
-        addl $8, %edi
+        addl $8, %edi # Ensure we get past the last offset!
         movl %edi, (symbol_offset)(%rip)
         pop %rdi
         push %rax   
@@ -279,6 +284,24 @@ set_symbol_table:
         leave
         ret
 
+// in rdi: Function descriptor
+.type set_symbol_count, @function
+set_symbol_count:
+        push %rbp
+        mov %rsp, %rbp
+        xor %rax, %rax
+        movl %edi, %eax
+        movq $20, %rdx
+        mulq %rdx
+        mov %rax, %rbx # Offset
+        call get_symbol_count
+        mov %eax, %ecx
+        lea function_buffer(%rip), %rax
+        movl %ecx, 12(%rax, %rbx) # Set the symbol table descriptor
+
+        leave
+        ret
+
 // in rdi: function descriptor
 .global set_current_function
 .type set_current_function, @function
@@ -312,7 +335,6 @@ get_offset:
         movl -4(%rax), %eax
         leave
         ret
-
 // out eax: The current symbol count
 .type get_symbol_count, @function
 get_symbol_count:
