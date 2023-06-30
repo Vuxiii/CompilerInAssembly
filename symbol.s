@@ -292,7 +292,7 @@ set_current_function:
         push %rbp
         mov %rsp, %rbp
 
-        mov %rdi, (_current_function)(%rip)
+        mov %edi, (_current_function)(%rip)
 
         leave
         ret

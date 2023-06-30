@@ -49,6 +49,7 @@ token_loop:
     cmp $0, %rax
     jne get_token_return_keyword
 
+not_keyword:
     // It was not a keyword or a special symbol.
     // Thus it is a number or an identifier.
 
