@@ -170,8 +170,7 @@ locate_symbol:
         pop %rax
         leave
         ret
-# symbol_buffer := [(char *, 1), (char *, 2),...]
-#                                            ^
+
 // in rdi: The descriptor for the identifier
 .type set_offset_on_stack, @function
 set_offset_on_stack:

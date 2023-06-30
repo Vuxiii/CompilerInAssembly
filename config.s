@@ -15,7 +15,7 @@
         input_buffer: .space 30
 .global in
         // in:         .asciz "William EOP"
-        in:         .asciz "def main() { var1 = 123 + 3 - 2} def anoter_func() { zeal = 3 + 3 asd = 3 + 4 sdfg =  32  + 5 } EOP"
+        in:         .asciz "def main() { var1 = 6 + 3 * 2 + 1 } EOP"
         // in:         .asciz "def main() { a = 4 + 6 } def another_function() { b = 1 + 9 e = 5 + 6 } EOP"
         // in:         .asciz "a = 4 + 6 b = 42 + 69 EOP"
         // in:         .asciz "= def == ( ) if { } [] print while +- /    * < > && let || willi EOP"
@@ -107,6 +107,8 @@
         _emit_add: .asciz "\n\taddq "
 .global _emit_sub
         _emit_sub: .asciz "\n\tsubq "
+.global _emit_mul
+        _emit_mul: .asciz "\n\timulq "
 .global _emit_lea
         _emit_lea: .asciz "\n\tleaq "
 .global _emit_call

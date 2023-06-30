@@ -246,6 +246,8 @@ visit_expression:
         je insert_add
         cmp $14, %rdx
         je insert_sub
+        cmp $15, %rdx
+        je insert_mul
         leave
         ret
 
@@ -275,6 +277,16 @@ visit_expression:
         ret
     insert_sub:
         callq emit_sub
+        callq emit_rax
+        callq emit_comma
+        callq emit_rbx
+        callq emit_push
+        callq emit_rbx
+        callq emit_newline_tab
+        leave 
+        ret
+    insert_mul:
+        callq emit_mul
         callq emit_rax
         callq emit_comma
         callq emit_rbx
@@ -432,6 +444,17 @@ emit_sub:
         movq $1, %rdi
         leaq _emit_sub, %rsi
         movq $7, %rdx
+        syscall
+        leave
+        ret
+.type emit_mul, @function
+emit_mul:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_mul, %rsi
+        movq $8, %rdx
         syscall
         leave
         ret

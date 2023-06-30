@@ -24,6 +24,9 @@
 
 
 .section .text
+
+// out rax: identifier token id
+// out rbx: identifier descriptor
 .global get_token
 .type get_token, @function
 get_token:
@@ -304,133 +307,159 @@ identify_token:
         cmp $1, %ax
         je return_or_token
 
+        movq $0, %rbx
         movq $0, %rax
         ret
 
         return_def_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $1, %rax
             ret
         return_if_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $2, %rax
             ret
         return_equals_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $3, %rax
             ret
         return_assignment_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $4, %rax
             ret
         return_lparen_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $5, %rax
             ret
         return_rparen_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $6, %rax
             ret
         return_lcurly_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $7, %rax
             ret
         return_rcurly_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $8, %rax
             ret
         return_lbracket_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $9, %rax
             ret
         return_rbracket_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $10, %rax
             ret
         return_print_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $11, %rax
             ret
         return_while_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $12, %rax
             ret
         return_plus_token:
             movq %rdi, (buffer_address)(%rip)
-
+            
+            movq $5, %rbx
             movq $13, %rax
             ret
         return_minus_token:
             movq %rdi, (buffer_address)(%rip)
-
+            
+            movq $5, %rbx
             movq $14, %rax
             ret
         return_times_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $10, %rbx
             movq $15, %rax
             ret
         return_div_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $10, %rbx
             movq $16, %rax
             ret
         return_less_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $17, %rax
             ret
         return_greater_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $18, %rax
             ret
         return_true_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $19, %rax
             ret
         return_false_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $20, %rax
             ret
         return_let_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $21, %rax
             ret
         return_and_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $22, %rax
             ret
         return_or_token:
             movq %rdi, (buffer_address)(%rip)
 
+            movq $0, %rbx
             movq $23, %rax
             ret
         return_eop_token:
             movq %rdi, (buffer_address)(%rip)
 
-            movq $-1, %rax
+            movq $0, %rbx
+            movl $-1, %eax
             ret
 
 
 get_token_return_eop:
         // rax: eop token id
+        movq $0, %rbx
         leave
         ret
 get_token_return_keyword:

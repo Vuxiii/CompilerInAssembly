@@ -215,13 +215,19 @@ parse_statement:
         ret
 
 .type parse_expression, @function
+.type parse_expression_dont_eat, @function
 // out rax: token_id
 // out rbx: descriptor
 parse_expression:
         push %rbp
         mov %rsp, %rbp
-        callq next_token
-
+        call next_token
+        jmp parse_expression_end_header
+parse_expression_dont_eat:
+        push %rbp
+        mov %rsp, %rbp
+        jmp parse_expression_end_header
+parse_expression_end_header:
         // Check the operator
         call peek_token_id
         cmp $13, %eax # +
@@ -250,26 +256,80 @@ parse_expression:
         push %rax
         call current_token_data
         push %rax
+    binary_operation_current_already_on_stack:
         call peek_token_id # The operator
         push %rax
+        call peek_token_data
+        push %rax
         # We now have the following:
+        # │ operator prec  │
         # │  operator_id   │
         # │token_descriptor│ LHS
         # │    token_id    │ LHS
         # │      ...       │
         # └────────────────┘
 
-        # We need to eat the operator.
+        # Eat the number
+        call next_token
+        # Eat the operator. It is on the stack ^
         call next_token
 
-        # Need some logic for handling precedence
+        # If the new operator has higher precedence than the current operator, parse that first.
+        # If not, delay the parse.
 
-        call parse_expression
-        # rax should contain the token_id
-        # rbx should contain the descriptor
+        # Check if it is an operator
+        call peek_token_id
+        cmp $13, %rax
+        jl single_binop
+        cmp $18, %rax
+        jle multiple_binop # If this: +, -, *, /, <, >
+        cmp $22, %rax
+        jl single_binop
+        cmp $23, %rax
+        jle multiple_binop # If this: ||, &&
+        jmp single_binop
+    
+    multiple_binop:
+
+        call peek_token_data
+        # rax next operator precedence
+        pop %rbx
+        # rbx current operator precedence
+        cmp %rbx, %rax
+        jle parse_left_expression
+
+    parse_right_expression_first:
+        # We want to parse right first
+        # We are in this situation:
+        # num + num * num ...
+        # num - num / num ...
+        # └───┼─┼───┼───This should be on the stack
+        #     └─┼───┼───This should be on the stack
+        #       └───┼───This is in current
+        #           └───This is in peek
         
-        push %rax # Store the token_id
-        push %rbx # Store the descriptor
+        call parse_expression_dont_eat
+
+        movq %rax, %rdi
+        movq %rbx, %rsi
+        pop %rdx
+        pop %r8
+        pop %rcx
+        call construct_binary_op_node
+        movq %rax, %rbx
+        movq $26, %rax
+
+        leave
+        ret
+
+    single_binop:
+        # Current has the number
+        pop %rax # Remove the precedence
+    parse_left_expression:
+        call current_token_id
+        push %rax
+        call current_token_data
+        push %rax
 
         # We now have all we need.
         # │token_descriptor│ RHS
@@ -288,15 +348,7 @@ parse_expression:
         call construct_binary_op_node
         movq %rax, %rbx 
         movq $26, %rax
-        // call push_token_descriptor
-        // movq $26, %rdi
-        // call push_token_id
-        // mov %eax, %edi
 
-        // # Ensure correct return values
-        // call current_token_data
-        // movq %rax, %rbx
-        // call current_token_id
         leave
         ret
 
@@ -638,13 +690,6 @@ next_token:
 
         callq get_token
         mov %eax, _peek_token_id_(%rip)
-        cmp $25, %rax
-        je set_descriptor
-        cmp $24, %rax
-        je set_descriptor
-        leave
-        ret
-    set_descriptor:
         mov %ebx, _peek_data_(%rip)
         leave
         ret
