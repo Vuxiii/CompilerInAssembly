@@ -15,7 +15,7 @@
         input_buffer: .space 30
 .global in
         // in:         .asciz "William EOP"
-        in:         .asciz "def main() { var1 =123 + 3 var2 = 4 + 9 var1 = 2 + 2} def anoter_func() { zeal = 3 + 3 asd = 3 + 4 sdfg =  32  + 5 } EOP"
+        in:         .asciz "def main() { var1 = 0 + 3 - 2} def anoter_func() { zeal = 3 + 3 asd = 3 + 4 sdfg =  32  + 5 } EOP"
         // in:         .asciz "def main() { a = 4 + 6 } def another_function() { b = 1 + 9 e = 5 + 6 } EOP"
         // in:         .asciz "a = 4 + 6 b = 42 + 69 EOP"
         // in:         .asciz "= def == ( ) if { } [] print while +- /    * < > && let || willi EOP"

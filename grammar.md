@@ -103,9 +103,6 @@ function:        descriptor
     var_count:   int
     symbol_table:descriptor
 
-symbol_buffer
-    [(offset_to_subtract, [...,(offset_on_stack)...]),...]
-
 function_list_buffer: size = 20
     [(identifier, body_id, body_descriptor, var_count, symbol_table),...]
 

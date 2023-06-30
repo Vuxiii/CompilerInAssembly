@@ -11,7 +11,6 @@
 _current_symbol_count_:         .int 0
 _current_function:              .int 0
 
-
 .section .text
 
 .type collect, @function
@@ -21,7 +20,7 @@ collect:
         mov %rsp, %rbp
         lea symbol_buffer(%rip), %rax
 
-        # We want to iterate over each  funciton. This can be done by iterating over the function_buffer.
+        # We want to iterate over each funciton. This can be done by iterating over the function_buffer.
         xor %rcx, %rcx
         mov function_offset(%rip), %ecx # Total amount of functions
         xor %rbx, %rbx
@@ -58,7 +57,6 @@ collect:
 visit_function:
         push %rbp
         mov %rsp, %rbp
-        movq $0, %r15 # Keep track if we have set our subtract_offset.
         push %rdi # Might need to store it.
 
         push $696969
@@ -146,7 +144,8 @@ locate_symbol:
         pop %rdi
         
         # rdi stores the variable
-        # rsi is the symbol_buffer
+        # rax is the symbol_buffer
+        # rsi stores the stored char * in the buffer
         # first 8 bytes is the pointer
         # next 4 bytes is the offset
     locate_symbol_loop_begin:
@@ -171,7 +170,8 @@ locate_symbol:
         pop %rax
         leave
         ret
-
+# symbol_buffer := [(char *, 1), (char *, 2),...]
+#                                            ^
 // in rdi: The descriptor for the identifier
 .type set_offset_on_stack, @function
 set_offset_on_stack:
