@@ -179,17 +179,7 @@ visit_statement:
         call emit_minus
 
         pop %rdi
-        call get_offset_on_stack
-
-        movq $8, %rdx
-        imulq %rdx
-
-        movq %rax, %rdi
-        call emit_number
-
-        call emit_lparen
-        call emit_rbp
-        call emit_rparen
+        call emit_var
 
         leave
         ret
@@ -205,6 +195,8 @@ visit_expression:
         je binary
         cmp $25, %rdi # Number
         je number
+        cmp $24, %rdi # identifier
+        je identifier
 
         # It was neither a binary op nor a number
         leave 
@@ -248,6 +240,21 @@ visit_expression:
         je insert_sub
         cmp $15, %rdx
         je insert_mul
+        leave
+        ret
+
+    identifier:
+        push %rsi
+        call emit_mov
+        call emit_minus
+        
+        pop %rdi
+        call emit_var
+
+        call emit_comma
+        call emit_rax
+        call emit_push
+        call emit_rax
         leave
         ret
 
@@ -295,6 +302,25 @@ visit_expression:
         callq emit_newline_tab
         leave 
         ret
+
+// in rdi: the descriptor of the identifier
+.type emit_var, @function
+emit_var:
+        push %rbp
+        mov %rsp, %rbp
+        call get_offset_on_stack
+        movq $8, %rdx
+        imulq %rdx
+
+        movq %rax, %rdi
+        call emit_number
+
+        call emit_lparen
+        call emit_rbp
+        call emit_rparen
+        leave
+        ret
+
 
 // in rdi: The number to be displayed
 .type emit_number, @function

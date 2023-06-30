@@ -215,142 +215,175 @@ parse_statement:
         ret
 
 .type parse_expression, @function
-.type parse_expression_dont_eat, @function
 // out rax: token_id
 // out rbx: descriptor
 parse_expression:
         push %rbp
         mov %rsp, %rbp
-        call next_token
-        jmp parse_expression_end_header
-parse_expression_dont_eat:
-        push %rbp
-        mov %rsp, %rbp
-        jmp parse_expression_end_header
-parse_expression_end_header:
-        // Check the operator
-        call peek_token_id
-        cmp $13, %eax # +
-        je binary_operation
-        cmp $14, %eax # -
-        je binary_operation
-        cmp $15, %eax # *
-        je binary_operation
-        cmp $16, %eax # /
-        je binary_operation
-        cmp $17, %eax # <
-        cmp $18, %eax # >
-        cmp $22, %eax # &&
-        cmp $23, %eax # ||
 
-        # It was not an operator.
-        # Return the expression
-        call current_token_data
-        mov %eax, %ebx
-        call current_token_id
+        # Check if we are dealing with a number
+
+        # We can have:
+        # [1]: parse_sum
+        # [2]: parse_func_call
+        call parse_sum
         leave
         ret
 
-    binary_operation:
-        call current_token_id
-        push %rax
-        call current_token_data
-        push %rax
-    binary_operation_current_already_on_stack:
-        call peek_token_id # The operator
-        push %rax
-        call peek_token_data
-        push %rax
-        # We now have the following:
-        # │ operator prec  │
-        # │  operator_id   │
-        # │token_descriptor│ LHS
-        # │    token_id    │ LHS
-        # │      ...       │
-        # └────────────────┘
-
-        # Eat the number
-        call next_token
-        # Eat the operator. It is on the stack ^
-        call next_token
-
-        # If the new operator has higher precedence than the current operator, parse that first.
-        # If not, delay the parse.
-
-        # Check if it is an operator
-        call peek_token_id
-        cmp $13, %rax
-        jl single_binop
-        cmp $18, %rax
-        jle multiple_binop # If this: +, -, *, /, <, >
-        cmp $22, %rax
-        jl single_binop
-        cmp $23, %rax
-        jle multiple_binop # If this: ||, &&
-        jmp single_binop
-    
-    multiple_binop:
-
-        call peek_token_data
-        # rax next operator precedence
-        pop %rbx
-        # rbx current operator precedence
-        cmp %rbx, %rax
-        jle parse_left_expression
-
-    parse_right_expression_first:
-        # We want to parse right first
-        # We are in this situation:
-        # num + num * num ...
-        # num - num / num ...
-        # └───┼─┼───┼───This should be on the stack
-        #     └─┼───┼───This should be on the stack
-        #       └───┼───This is in current
-        #           └───This is in peek
+    .type parse_sum, @function
+    parse_sum:
+            # We can have:
+            # [1]: parse_mult + parse_expression
+            # [2]: parse_mult - parse_expression
+            # [3]: parse_mult
+            push %rbp
+            mov %rsp, %rbp
+            # Parse the mult
+            call parse_mult
+            push %rax
+            push %rbx
+        check_sum:
+            # Check for operator
+            call peek_token_id
+            cmp $13, %rax
+            je parse_sum_return_plus
+            cmp $14, %rax
+            je parse_sum_return_minus
         
-        call parse_expression_dont_eat
+        # Case [3]
+            pop %rbx
+            pop %rax
+            leave
+            ret
+        parse_sum_return_plus:
+        # Case [1]
+            call next_token
+            call parse_mult
+            # LHS
+            pop %r8
+            pop %rcx
+            # operator
+            movq $13, %rdx
+            movq %rax, %rdi
+            movq %rbx, %rsi
+            call construct_binary_op_node
+            push $26
+            push %rax
+            jmp check_sum
+        parse_sum_return_minus:
+        # Case [2]
+            call next_token
+            call parse_mult
+            # LHS
+            pop %r8
+            pop %rcx
+            # operator
+            movq $14, %rdx
+            movq %rax, %rdi
+            movq %rbx, %rsi
+            call construct_binary_op_node
+            push $26
+            push %rax
+            jmp check_sum
+        
+    .type parse_mult, @function
+    parse_mult:
 
-        movq %rax, %rdi
-        movq %rbx, %rsi
-        pop %rdx
-        pop %r8
-        pop %rcx
-        call construct_binary_op_node
-        movq %rax, %rbx
-        movq $26, %rax
+            # We can have:
+            # [1]: parse_token * parse_mult
+            # [2]: parse_token / parse_mult
+            # [3]: parse_token
+            push %rbp
+            mov %rsp, %rbp
+            # Parse the token
+            call parse_token
+            push %rax
+            push %rbx
+        check_mult:    
+            # Check for operator
+            call peek_token_id
+            cmp $15, %rax
+            je parse_mult_return_times
+            cmp $16, %rax
+            je parse_mult_return_div
 
-        leave
-        ret
+        # Case [3]
+            pop %rbx
+            pop %rax
+            leave
+            ret
+        parse_mult_return_times:
+        # Case [1]
+            call next_token
+            call parse_token
+            # LHS
+            pop %r8
+            pop %rcx
+            # operator
+            movq $15, %rdx
+            movq %rax, %rdi
+            movq %rbx, %rsi
+            call construct_binary_op_node
+            push $26
+            push %rax
+            jmp check_mult
+        parse_mult_return_div:
+        # Case [2]
+            call next_token
+            call parse_token
+            # LHS
+            pop %r8
+            pop %rcx
+            # operator
+            movq $16, %rdx
+            movq %rax, %rdi
+            movq %rbx, %rsi
+            call construct_binary_op_node
+            push $26
+            push %rax
+            jmp check_mult
 
-    single_binop:
-        # Current has the number
-        pop %rax # Remove the precedence
-    parse_left_expression:
-        call current_token_id
-        push %rax
-        call current_token_data
-        push %rax
-
-        # We now have all we need.
-        # │token_descriptor│ RHS
-        # │    token_id    │ RHS
-        # │  operator_id   │
-        # │token_descriptor│ LHS
-        # │    token_id    │ LHS
-        # │      ...       │
-        # └────────────────┘
-
-        pop %rsi
-        pop %rdi
-        pop %rdx
-        pop %r8
-        pop %rcx
-        call construct_binary_op_node
-        movq %rax, %rbx 
-        movq $26, %rax
-
-        leave
-        ret
+    .type parse_token, @function
+    parse_token:
+            # We can have:
+            # [1]: '(' expr ')'
+            # [2]: 'number'
+            # [2]: 'identifier'
+            push %rbp
+            mov %rsp, %rbp
+            call peek_token_id
+            cmp $25, %rax
+            je parse_token_return_number
+            cmp $24, %rax
+            je parse_token_return_identifier
+        # Case [1]
+            # Consume the '('
+            call next_token
+            call parse_expression
+            push %rax
+            push %rbx
+            # Consume the ')'
+            call next_token
+            pop %rbx
+            pop %rax
+            leave
+            ret
+        parse_token_return_number:
+        # Case [2]
+            call next_token
+            call current_token_data
+            movq %rax, %rbx
+            call current_token_id
+            leave
+            ret
+        parse_token_return_identifier:
+        # Case [3]
+            call next_token
+            call current_token_data
+            movq %rax, %rbx
+            call current_token_id
+            leave
+            ret
 
 // in rdi: lhs id
 // in rsi: lhs descriptor
