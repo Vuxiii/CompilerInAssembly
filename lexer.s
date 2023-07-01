@@ -182,6 +182,12 @@ identify_token:
         je return_equals_token
 
         movq %rdx, %rdi
+        movq $token_noteq, %rsi
+        callq cmp_string
+        cmp $1, %ax
+        je return_notequals_token
+
+        movq %rdx, %rdi
         movq $token_assignment, %rsi
         callq cmp_string
         cmp $1, %ax
@@ -328,6 +334,12 @@ identify_token:
 
             movq $0, %rbx
             movq $3, %rax
+            ret
+        return_notequals_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $27, %rax
             ret
         return_assignment_token:
             movq %rdi, (buffer_address)(%rip)

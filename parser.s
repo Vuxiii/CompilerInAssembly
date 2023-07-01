@@ -29,6 +29,8 @@ _peek_data_:                    .int 0
 
 .global function_buffer
         function_buffer:        .space 256
+.global if_buffer
+        if_buffer:              .space 256
 .global statement_list_buffer
         statement_list_buffer:  .space 256
 .global assignment_buffer
@@ -38,6 +40,7 @@ _peek_data_:                    .int 0
 binary_op_offset:               .int 0
 assignment_offset:              .int 0
 statement_list_offset:          .int 0
+if_offset:                      .int 0
 .global function_offset
         function_offset:        .int 0
 
@@ -73,9 +76,46 @@ parse_statement:
         je maybe_assignment
         cmp $1, %rax
         je function_statement
-
+        cmp $2, %rax
+        je if_statement
 
         jmp node_is_not_statement
+
+    if_statement:
+        # eat the if
+        call next_token
+        # eat the '('
+        call next_token
+
+        # parse the expression
+        call parse_expression
+        push %rax # id
+        push %rbx # descriptor
+        # eat the ')'
+        call next_token
+        # eat the '{'
+        call next_token
+
+        call parse_statement
+        push %rax # id
+        push %rbx # descriptor
+
+        # eat the '}'
+        call next_token
+
+        # Construct the if statement
+        pop %rcx
+        pop %rdx
+        pop %rsi
+        pop %rdi
+        call construct_if_node
+        push $31
+        push %rax
+        
+        // movq %rax, %rbx
+        // movq $31, %rax
+
+        jmp check_statement_list
 
     function_statement:
 
@@ -124,6 +164,7 @@ parse_statement:
         jne node_is_not_statement # Parse error! Expected token: '}'
 
         # Remove the '}'
+        call next_token
         call next_token
 
         # We have a good function. Construct it and return
@@ -227,6 +268,34 @@ parse_expression:
         # [1]: parse_sum
         # [2]: parse_func_call
         call parse_sum
+        push %rax
+        push %rbx
+        # Check for '==', '<', '>'
+        call peek_token_id
+        cmp $3, %rax
+        je parse_create_binop # equals
+        cmp $17, %rax
+        je parse_create_binop # less
+        cmp $18, %rax
+        je parse_create_binop # greater
+        cmp $27, %rax
+        je parse_create_binop # noteq
+        pop %rbx
+        pop %rax
+        leave
+        ret
+    parse_create_binop:
+        push %rax
+        call next_token
+        call parse_sum
+        movq %rax, %rdi
+        movq %rbx, %rsi
+        pop %rdx
+        pop %r8
+        pop %rcx
+        call construct_binary_op_node
+        movq %rax, %rbx
+        movq $26, %rax
         leave
         ret
 
@@ -531,6 +600,41 @@ construct_function_node:
         leave
         ret
 
+// in rdi: guard id
+// in rsi: guard descriptor
+// in rdx: body id
+// in rcx: body descriptor
+// out:    if descriptor
+.type construct_if_node, @function
+construct_if_node:
+        push %rbp
+        mov %rsp, %rbp 
+        xor %rbx, %rbx
+        xor %rax, %rax
+        mov if_offset(%rip), %eax
+        push %rax # Store so we can return the descriptor
+        # Ensure that we are offset by the correct size of each struct -> ebx * sizeof(binaryop) -> ebx * 20 bytes
+        push %rdx # mulq uses rdx...
+        movq $16, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+        pop %rdx
+        lea if_buffer(%rip), %rax
+        
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+        mov %edx,  8(%rax, %rbx)
+        mov %ecx, 12(%rax, %rbx)
+        
+        pop %rax # Restore descriptor
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (if_offset)(%rip)
+
+        leave
+        ret
+
 // in rdi: Token descriptor
 // out 16(%rbp): lhs id
 // out 24(%rbp): lhs descriptor
@@ -654,6 +758,38 @@ retrieve_assignment:
         mov %edi, 16(%rbp)
         mov %esi, 24(%rbp)
         mov %edx, 32(%rbp)
+
+        leave
+        ret
+// in rdi: token descriptor
+// out  4(%rbp): guard id
+// out  8(%rbp): guard descriptor
+// out 12(%rbp): body id
+// out 16(%rbp): body descriptor
+.type retrieve_if, @function
+.global retrieve_if
+retrieve_if:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $16, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea if_buffer(%rip), %rax
+        xor %rdi, %rdi
+        xor %rsi, %rsi
+        xor %rdx, %rdx
+        xor %rcx, %rcx
+        mov   (%rax, %rbx), %edi # guard id
+        mov  4(%rax, %rbx), %esi # guard descriptor
+        mov  8(%rax, %rbx), %edx # body id
+        mov 12(%rax, %rbx), %ecx # body descriptor
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+        mov %edx, 32(%rbp)
+        mov %ecx, 40(%rbp)
 
         leave
         ret

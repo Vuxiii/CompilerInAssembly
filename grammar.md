@@ -76,12 +76,6 @@ binaryop:        descriptor
     right->type: token_id
     right:       descriptor
 
-// This is unnecessary
-expression:      descriptor
-    type: 27
-    node->type:  token_id
-    node:        descriptor
-
 statement_list:  descriptor
     type: 28
     left->type:  token_id
@@ -102,6 +96,16 @@ function:        descriptor
     body:        descriptor
     var_count:   int
     symbol_table:descriptor
+
+if_statement:    descriptor
+    type: 31
+    guard->type: token_id
+    guard:       descriptor
+    body->type:  token_id
+    body:        descriptor
+
+if_list_buffer: size = 16
+    [(guard_id, guard_descriptor, body_id, body_descriptor),...]
 
 function_list_buffer: size = 20
     [(identifier, body_id, body_descriptor, var_count, symbol_table),...]

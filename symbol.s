@@ -69,14 +69,27 @@ visit_function:
         pop %rdi # Function identifier
         pop %rdi # body id
         pop %rsi # body descriptor
-
+    check_for_statement_id:
         cmp $28, %rdi # statement_list
         je statement_list
         cmp $29, %rdi
         je do_assignment
+        cmp $31, %rdi
+        je symbol_if
         leave # If we reach here, something bad happend....
         ret
 
+    symbol_if:
+        push $696969
+        push $696969
+        push $696969
+        push $696969
+        movq %rsi, %rdi
+        call retrieve_if
+        addq $16, %rsp # remove the guard
+        pop %rdi
+        pop %rsi
+        jmp check_for_statement_id
     do_assignment:
         call assignment
         leave

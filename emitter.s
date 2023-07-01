@@ -60,14 +60,17 @@ emit:
         mov %rsp, %rbp 
         push %rdi
         push %rsi
-        // callq emit_asm_prologue
-        // callq emit_function_prologue
+        callq emit_asm_prologue
+        callq emit_function_prologue
+        call emit_call
+        call emit_main
+        callq emit_asm_epilogue
+        
 
         pop %rsi
         pop %rdi
         callq visit_statement
 
-        // callq emit_asm_epilogue
 
         leave
         ret
@@ -80,15 +83,61 @@ visit_statement:
         mov %rsp, %rbp
 
         cmp $29, %rdi
-        je assignment
+        je visit_assignment
         cmp $28, %rdi
-        je statement_list
+        je visit_statement_list
         cmp $30, %rdi
-        je function
+        je visit_function
+        cmp $31, %rdi
+        je visit_if
+
         leave
         ret
 
-    function:
+    visit_if:
+        mov %rsi, %rdi
+        push %rdi # Store the id of the if statement for use in the label
+        push $696969
+        push $696969
+        push $696969
+        push $696969
+        call retrieve_if
+        pop %rdi
+        pop %rsi
+        call visit_expression
+
+
+        call emit_pop
+        call emit_rax
+        call emit_cmp
+        call emit_dollar
+        movq $1, %rdi
+        call emit_number
+        call emit_comma
+        call emit_rax
+        call emit_jne
+        
+        pop %rax 
+        pop %rbx
+        pop %rdi # The descriptor of this if statement
+        push %rdi
+        push %rbx
+        push %rax 
+        call emit_number
+
+        pop %rdi
+        pop %rsi
+        call visit_statement
+        
+        pop %rdi
+        # Insert the end of body label
+        call emit_newline
+        call emit_number
+        call emit_colon
+        leave 
+        ret
+
+    visit_function:
         movq %rsi, %rdi
         call set_current_function
         push $696969
@@ -136,7 +185,7 @@ visit_statement:
 
         leave
         ret
-    statement_list:
+    visit_statement_list:
 
         movq %rsi, %rdi
         push $696969
@@ -154,7 +203,7 @@ visit_statement:
         leave
         ret
 
-    assignment:
+    visit_assignment:
         // subq $24, %rsp
         push $696969
         push $696969
@@ -240,6 +289,14 @@ visit_expression:
         je insert_sub
         cmp $15, %rdx
         je insert_mul
+        cmp $3, %rdx
+        je insert_equals
+        cmp $17, %rdx
+        je insert_less
+        cmp $18, %rdx
+        je insert_greater
+        cmp $27, %rdx
+        je insert_noteq
         leave
         ret
 
@@ -302,6 +359,78 @@ visit_expression:
         callq emit_newline_tab
         leave 
         ret
+    insert_equals:
+        call insert_comparison_prologue
+        call emit_cmove
+        call emit_rdx
+        call emit_comma
+        call emit_rcx
+        call emit_push
+        call emit_rcx
+        call emit_newline_tab
+        leave 
+        ret
+    insert_noteq:
+        call insert_comparison_prologue
+        call emit_cmovz
+        call emit_rdx
+        call emit_comma
+        call emit_rcx
+        call emit_push
+        call emit_rcx
+        call emit_newline_tab
+        leave 
+        ret
+    insert_less:
+        call insert_comparison_prologue
+        call emit_cmovl
+        call emit_rdx
+        call emit_comma
+        call emit_rcx
+        call emit_push
+        call emit_rcx
+        call emit_newline_tab
+        leave 
+        ret
+    insert_greater:
+        call insert_comparison_prologue
+        call emit_cmovg
+        call emit_rdx
+        call emit_comma
+        call emit_rcx
+        call emit_push
+        call emit_rcx
+        call emit_newline_tab
+        leave 
+        ret
+    insert_comparison_prologue:
+        push %rbp
+        mov %rsp, %rbp
+
+        # Set up for true
+        call emit_mov
+        call emit_dollar
+        movq $1, %rdi
+        call emit_number
+        call emit_comma
+        call emit_rdx
+
+        # Default to false
+        call emit_mov
+        call emit_dollar
+        movq $0, %rdi
+        call emit_number
+        call emit_comma
+        call emit_rcx
+
+        call emit_cmp
+        call emit_rax
+        call emit_comma
+        call emit_rbx
+
+        leave
+        ret
+    
 
 // in rdi: the descriptor of the identifier
 .type emit_var, @function
@@ -381,7 +510,7 @@ emit_asm_prologue:
         movq $1, %rax
         movq $1, %rdi
         leaq _emit_asm_prologue, %rsi
-        movq $31, %rdx
+        movq $38, %rdx
         syscall
         leave
         ret
@@ -418,6 +547,17 @@ emit_asm_epilogue:
         syscall
         leave
         ret
+.type emit_main, @function
+emit_main:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_main, %rsi
+        movq $4, %rdx
+        syscall
+        leave
+        ret
 .type emit_push, @function
 emit_push:
         push %rbp
@@ -448,6 +588,50 @@ emit_mov:
         movq $1, %rdi
         leaq _emit_mov, %rsi
         movq $7, %rdx
+        syscall
+        leave
+        ret
+.type emit_cmove, @function
+emit_cmove:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_cmove, %rsi
+        movq $9, %rdx
+        syscall
+        leave
+        ret
+.type emit_cmovz, @function
+emit_cmovz:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_cmovz, %rsi
+        movq $9, %rdx
+        syscall
+        leave
+        ret
+.type emit_cmovg, @function
+emit_cmovg:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_cmovg, %rsi
+        movq $9, %rdx
+        syscall
+        leave
+        ret
+.type emit_cmovl, @function
+emit_cmovl:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_cmovl, %rsi
+        movq $9, %rdx
         syscall
         leave
         ret
@@ -568,6 +752,17 @@ emit_jge:
         movq $1, %rax
         movq $1, %rdi
         leaq _emit_jge, %rsi
+        movq $6, %rdx
+        syscall
+        leave
+        ret
+.type emit_cmp, @function
+emit_cmp:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_cmp, %rsi
         movq $6, %rdx
         syscall
         leave
@@ -761,6 +956,8 @@ emit_identifier:
         inc %rcx
         test %bl, %bl
         jnz count_len
+        
+        dec %rcx # Remove '\0'
 
         movq %rax, %rsi
         movq $1, %rax

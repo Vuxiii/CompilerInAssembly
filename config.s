@@ -15,7 +15,7 @@
         input_buffer: .space 30
 .global in
         // in:         .asciz "William EOP"
-        in:         .asciz "def main() { var1 = 3 var2 = 9 * var1 } EOP"
+        in:         .asciz "def main() { if ( 1+2 < 3 ) { var1 = 3 }} EOP"
         // in:         .asciz "def main() { a = 4 + 6 } def another_function() { b = 1 + 9 e = 5 + 6 } EOP"
         // in:         .asciz "a = 4 + 6 b = 42 + 69 EOP"
         // in:         .asciz "= def == ( ) if { } [] print while +- /    * < > && let || willi EOP"
@@ -76,7 +76,9 @@
 .global token_identifier
         token_identifier: .asciz ""      # 24
 .global token_number
-        token_number:     .asciz ""     # 25
+        token_number:     .asciz ""      # 25
+.global token_noteq
+        token_noteq:      .asciz "!="    # 27
 
 .global number_0
         number_0:   .asciz "0" # value: 48
@@ -85,7 +87,7 @@
         number_9:   .asciz "9" # value: 57
 
 .global _emit_asm_prologue
-        _emit_asm_prologue:       .asciz ".section .text\n.global _start:\n"
+        _emit_asm_prologue:       .asciz ".section .text\n.global _start\n_start:\n"
 
 .global _emit_function_prologue
         _emit_function_prologue:  .asciz "\n\tpush %rbp\n\tmov %rsp, %rbp\n"
@@ -103,6 +105,14 @@
         _emit_pop: .asciz "\n\tpop "
 .global _emit_mov
         _emit_mov: .asciz "\n\tmovq "
+.global _emit_cmove
+        _emit_cmove: .asciz "\n\tcmoveq "
+.global _emit_cmovz
+        _emit_cmovz: .asciz "\n\tcmovzq "
+.global _emit_cmovg
+        _emit_cmovg: .asciz "\n\tcmovgq "
+.global _emit_cmovl
+        _emit_cmovl: .asciz "\n\tcmovlq "
 .global _emit_add
         _emit_add: .asciz "\n\taddq "
 .global _emit_sub
@@ -125,6 +135,8 @@
         _emit_jle: .asciz "\n\tjle "
 .global _emit_jge
         _emit_jge: .asciz "\n\tjge "
+.global _emit_cmp
+        _emit_cmp: .asciz "\n\tcmp "
 
 # --[ Operands ]--
 .global _emit_rax
@@ -161,3 +173,5 @@
         _emit_newline: .asciz "\n"
 .global _emit_newline_tab
         _emit_newline_tab: .asciz "\n\t"
+.global _emit_main
+        _emit_main: .asciz "main"
