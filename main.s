@@ -288,8 +288,8 @@ print_false:
 print_let:
     movq $1, %rax
     movq $1, %rdi
-    leaq token_let, %rsi
-    movq $3, %rdx
+    leaq token_struct, %rsi
+    movq $6, %rdx
     syscall
     callq println
     jmp _llopers

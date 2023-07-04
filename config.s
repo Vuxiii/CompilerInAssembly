@@ -68,8 +68,8 @@
         token_true:       .asciz "true"  # 19
 .global token_false
         token_false:      .asciz "false" # 20
-.global token_let
-        token_let:        .asciz "let"   # 21
+.global token_struct
+        token_struct:     .asciz "struct"# 21
 .global token_and
         token_and:        .asciz "&&"    # 22
 .global token_or

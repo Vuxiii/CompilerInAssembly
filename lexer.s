@@ -298,10 +298,10 @@ identify_token:
         je return_false_token
 
         movq %rdx, %rdi
-        movq $token_let, %rsi
+        movq $token_struct, %rsi
         callq cmp_string
         cmp $1, %ax
-        je return_let_token
+        je return_struct_token
 
         movq %rdx, %rdi
         movq $token_and, %rsi
@@ -445,7 +445,7 @@ identify_token:
             movq $0, %rbx
             movq $20, %rax
             ret
-        return_let_token:
+        return_struct_token:
             movq %rdi, (buffer_address)(%rip)
 
             movq $0, %rbx
