@@ -15,8 +15,8 @@
         input_buffer: .space 30
 .global in
         // in:         .asciz "William EOP"
-        in:         .asciz "def main() { if ( 1000+2 < 3 ) { var1 = 3 } if (3+3 == 2) { var2 = 3 var3 = 1724687 } var4 = 234 + 4244 } EOP"
-        // in:         .asciz "def main() { var1 = 3 var2 = 3 var3 = 234 + 4244 } EOP"
+        // in:         .asciz "def main() { if ( 1000+2 < 3 ) { var1 = 3 } if (3+3 == 2) { var2 = 3 var3 = 1724687 } var4 = 234 + 4244 } EOP"
+        in:         .asciz "def main() { var1 = 0 while ( var1 < 10 ) { var1 = var1 + 1 } var1 = 0 } EOP"
         // in:         .asciz "def main() { a = 300 + 6 } EOP"
         // in:         .asciz "a = 4 + 6 b = 42 + 69 EOP"
         // in:         .asciz "= def == ( ) if { } [] print while +- /    * < > && let || willi EOP"
@@ -176,3 +176,6 @@
         _emit_newline_tab: .asciz "\n\t"
 .global _emit_main
         _emit_main: .asciz "main"
+
+.global _emit_guard
+        _emit_guard: .asciz "guard"

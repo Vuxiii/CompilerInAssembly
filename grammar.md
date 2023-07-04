@@ -104,6 +104,16 @@ if_statement:    descriptor
     body->type:  token_id
     body:        descriptor
 
+while_statement: descriptor
+    type: 32
+    guard->type: token_id
+    guard:       descriptor
+    body->type:  token_id
+    body:        descriptor
+
+while_list_buffer: size = 16
+    [(guard_id, guard_descriptor, body_id, body_descriptor),...]
+
 if_list_buffer: size = 16
     [(guard_id, guard_descriptor, body_id, body_descriptor),...]
 

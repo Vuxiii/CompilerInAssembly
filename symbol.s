@@ -88,6 +88,8 @@ symbol_check_statement_kind:
         je symbol_check_call_assignment
         cmp $31, %rdi
         je symbol_check_call_if
+        cmp $32, %rdi
+        je symbol_check_call_while
 
         # Found nothing. Return...
         jmp symbol_check_statement_kind_end
@@ -100,12 +102,17 @@ symbol_check_statement_kind:
     symbol_check_call_if:
         call symbol_if
         jmp symbol_check_statement_kind_end
+    symbol_check_call_while:
+        call symbol_while
+        jmp symbol_check_statement_kind_end
     symbol_check_statement_kind_end:
         leave
         ret
 
 .type symbol_if, @function
 symbol_if:
+        push %rbp
+        movq %rsp, %rbp
         push $696969
         push $696969
         push $696969
@@ -120,10 +127,31 @@ symbol_if:
         call symbol_check_statement_kind
         leave
         ret
+     
+.type symbol_while, @function
+symbol_while:
+        push %rbp
+        movq %rsp, %rbp
+        push $696969
+        push $696969
+        push $696969
+        push $696969
+        movq %rsi, %rdi
+        call retrieve_while
+        addq $16, %rsp # remove the guard
         
+        pop %rdi
+        pop %rsi
+        # Check for which statement the body is.
+        call symbol_check_statement_kind
+        leave
+        ret
+           
 
 .type symbol_statement_list, @function
 symbol_statement_list:
+        push %rbp
+        movq %rsp, %rbp
         # Check left side. Then jump back up
         push $696969
         push $696969

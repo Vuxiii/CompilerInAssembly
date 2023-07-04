@@ -90,6 +90,8 @@ visit_statement:
         je visit_function
         cmp $31, %rdi
         je visit_if
+        cmp $32, %rdi
+        je visit_while
 
         leave
         ret
@@ -117,6 +119,8 @@ visit_statement:
         call emit_rax
         call emit_jne
         
+        # Construct the end of body label
+        call emit_if
         pop %rax 
         pop %rbx
         pop %rdi # The descriptor of this if statement
@@ -131,6 +135,73 @@ visit_statement:
         
         # Insert the end of body label
         call emit_newline
+        call emit_if
+        pop %rdi
+        call emit_number
+        call emit_colon
+        leave 
+        ret
+
+    visit_while:
+        mov %rsi, %rdi
+        push %rdi # Store the id of the while statement for use in the label
+        
+        # Construct the enter-guard label
+        
+        call emit_newline
+        call emit_guard
+        pop %rdi
+        push %rdi
+        call emit_number
+        call emit_colon
+        
+        pop %rdi
+        push %rdi
+        
+        push $696969
+        push $696969
+        push $696969
+        push $696969
+        call retrieve_while
+        pop %rdi
+        pop %rsi
+        call visit_expression
+
+
+        call emit_pop
+        call emit_rax
+        call emit_cmp
+        call emit_dollar
+        movq $1, %rdi
+        call emit_number
+        call emit_comma
+        call emit_rax
+        call emit_jne
+        
+        # Construct the end of body label
+        call emit_while
+        pop %rax 
+        pop %rbx
+        pop %rdi # The descriptor of this if statement
+        push %rdi
+        push %rbx
+        push %rax 
+        call emit_number
+
+        pop %rdi
+        pop %rsi
+        call visit_statement
+        
+        # Insert jump to enter-guard label
+        call emit_jmp
+        call emit_guard
+        pop %rdi
+        push %rdi
+        call emit_number
+
+        # Insert the end of body label
+        call emit_newline
+        call emit_while
         pop %rdi
         call emit_number
         call emit_colon
@@ -963,6 +1034,40 @@ emit_identifier:
         movq $1, %rax
         movq $1, %rdi
         movq %rcx, %rdx
+        syscall
+        leave
+        ret
+
+.type emit_if, @function
+emit_if:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq token_if, %rsi
+        movq $2, %rdx
+        syscall
+        leave
+        ret
+.type emit_while, @function
+emit_while:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq token_while, %rsi
+        movq $5, %rdx
+        syscall
+        leave
+        ret
+.type emit_guard, @function
+emit_guard:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_guard, %rsi
+        movq $5, %rdx
         syscall
         leave
         ret

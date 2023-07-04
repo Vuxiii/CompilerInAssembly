@@ -31,6 +31,8 @@ _peek_data_:                    .int 0
         function_buffer:        .space 256
 .global if_buffer
         if_buffer:              .space 256
+.global while_buffer
+        while_buffer:              .space 256
 .global statement_list_buffer
         statement_list_buffer:  .space 256
 .global assignment_buffer
@@ -41,6 +43,7 @@ binary_op_offset:               .int 0
 assignment_offset:              .int 0
 statement_list_offset:          .int 0
 if_offset:                      .int 0
+while_offset:                   .int 0
 .global function_offset
         function_offset:        .int 0
 
@@ -78,8 +81,43 @@ parse_statement:
         je function_statement
         cmp $2, %rax
         je if_statement
+        cmp $12, %rax
+        je while_statement
 
         jmp node_is_not_statement
+
+    while_statement:
+        # eat the while
+        call next_token
+        # eat the '('
+        call next_token
+
+        # parse the expression
+        call parse_expression
+        push %rax # id
+        push %rbx # descriptor
+        # eat the ')'
+        call next_token
+        # eat the '{'
+        call next_token
+
+        call parse_statement
+        push %rax # id
+        push %rbx # descriptor
+
+        # eat the '}'
+        call next_token
+
+        # Construct the while statement
+        pop %rcx
+        pop %rdx
+        pop %rsi
+        pop %rdi
+        call construct_while_node
+        push $32
+        push %rax
+        
+        jmp check_statement_list
 
     if_statement:
         # eat the if
@@ -111,9 +149,6 @@ parse_statement:
         call construct_if_node
         push $31
         push %rax
-        
-        // movq %rax, %rbx
-        // movq $31, %rax
 
         jmp check_statement_list
 
@@ -634,6 +669,40 @@ construct_if_node:
 
         leave
         ret
+// in rdi: guard id
+// in rsi: guard descriptor
+// in rdx: body id
+// in rcx: body descriptor
+// out:    while descriptor
+.type construct_while_node, @function
+construct_while_node:
+        push %rbp
+        mov %rsp, %rbp 
+        xor %rbx, %rbx
+        xor %rax, %rax
+        mov while_offset(%rip), %eax
+        push %rax # Store so we can return the descriptor
+        # Ensure that we are offset by the correct size of each struct -> ebx * sizeof(binaryop) -> ebx * 20 bytes
+        push %rdx # mulq uses rdx...
+        movq $16, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+        pop %rdx
+        lea while_buffer(%rip), %rax
+        
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+        mov %edx,  8(%rax, %rbx)
+        mov %ecx, 12(%rax, %rbx)
+        
+        pop %rax # Restore descriptor
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (while_offset)(%rip)
+
+        leave
+        ret
 
 // in rdi: Token descriptor
 // out 16(%rbp): lhs id
@@ -777,6 +846,39 @@ retrieve_if:
         mov %rax, %rbx
 
         lea if_buffer(%rip), %rax
+        xor %rdi, %rdi
+        xor %rsi, %rsi
+        xor %rdx, %rdx
+        xor %rcx, %rcx
+        mov   (%rax, %rbx), %edi # guard id
+        mov  4(%rax, %rbx), %esi # guard descriptor
+        mov  8(%rax, %rbx), %edx # body id
+        mov 12(%rax, %rbx), %ecx # body descriptor
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+        mov %edx, 32(%rbp)
+        mov %ecx, 40(%rbp)
+
+        leave
+        ret
+
+// in rdi: token descriptor
+// out  4(%rbp): guard id
+// out  8(%rbp): guard descriptor
+// out 12(%rbp): body id
+// out 16(%rbp): body descriptor
+.type retrieve_while, @function
+.global retrieve_while
+retrieve_while:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $16, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea while_buffer(%rip), %rax
         xor %rdi, %rdi
         xor %rsi, %rsi
         xor %rdx, %rdx
