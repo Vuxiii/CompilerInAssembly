@@ -79,6 +79,8 @@ not_keyword:
         submit_number: # Store the number in %ebx
             // We have the range from [(%rdi, %rdx), (%rdi, &rcx)[ that defines our number
             // We haven't reached the bottom of the stack. Therefore -> Continue to compute the number
+            # Clear rax, Some numbers are big
+            xor %rax, %rax
             
             # Fetch the stored char
             movb (%rdi, %r9), %al

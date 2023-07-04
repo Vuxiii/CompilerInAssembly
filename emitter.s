@@ -60,16 +60,16 @@ emit:
         mov %rsp, %rbp 
         push %rdi
         push %rsi
-        callq emit_asm_prologue
-        callq emit_function_prologue
+        call emit_asm_prologue
+        call emit_function_prologue
         call emit_call
         call emit_main
-        callq emit_asm_epilogue
+        call emit_asm_epilogue
         
 
         pop %rsi
         pop %rdi
-        callq visit_statement
+        call visit_statement
 
 
         leave
@@ -129,9 +129,9 @@ visit_statement:
         pop %rsi
         call visit_statement
         
-        pop %rdi
         # Insert the end of body label
         call emit_newline
+        pop %rdi
         call emit_number
         call emit_colon
         leave 
@@ -154,7 +154,7 @@ visit_statement:
         call emit_colon
         call emit_function_prologue
         
-        # Make place for local vars on the stack
+        # Make place for local vars on the stack 
         call emit_sub
         call emit_dollar
 

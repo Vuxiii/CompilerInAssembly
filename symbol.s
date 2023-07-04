@@ -66,20 +66,46 @@ visit_function:
         push $696969
         call retrieve_function
 
-        pop %rdi # Function identifier
+        addq $8, %rsp # Remove Function identifier
         pop %rdi # body id
         pop %rsi # body descriptor
-    check_for_statement_id:
-        cmp $28, %rdi # statement_list
-        je statement_list
-        cmp $29, %rdi
-        je do_assignment
-        cmp $31, %rdi
-        je symbol_if
-        leave # If we reach here, something bad happend....
+        call symbol_check_statement_kind        
+
+        # Done checking this functions statements.
+        leave
         ret
 
-    symbol_if:
+// in rdi: token id
+// in rsi: token descriptor
+.type symbol_check_statement_kind, @function
+symbol_check_statement_kind:
+        push %rbp
+        movq %rsp, %rbp
+        
+        cmp $28, %rdi # statement_list
+        je symbol_check_call_statement_list
+        cmp $29, %rdi
+        je symbol_check_call_assignment
+        cmp $31, %rdi
+        je symbol_check_call_if
+
+        # Found nothing. Return...
+        jmp symbol_check_statement_kind_end
+    symbol_check_call_statement_list:
+        call symbol_statement_list
+        jmp symbol_check_statement_kind_end
+    symbol_check_call_assignment:
+        call symbol_assignment
+        jmp symbol_check_statement_kind_end
+    symbol_check_call_if:
+        call symbol_if
+        jmp symbol_check_statement_kind_end
+    symbol_check_statement_kind_end:
+        leave
+        ret
+
+.type symbol_if, @function
+symbol_if:
         push $696969
         push $696969
         push $696969
@@ -87,16 +113,17 @@ visit_function:
         movq %rsi, %rdi
         call retrieve_if
         addq $16, %rsp # remove the guard
+        
         pop %rdi
         pop %rsi
-        jmp check_for_statement_id
-    do_assignment:
-        call assignment
+        # Check for which statement the body is.
+        call symbol_check_statement_kind
         leave
         ret
         
 
-    statement_list:
+.type symbol_statement_list, @function
+symbol_statement_list:
         # Check left side. Then jump back up
         push $696969
         push $696969
@@ -104,28 +131,21 @@ visit_function:
         push $696969
         movq %rsi, %rdi
         call retrieve_statement_list
+        
         pop %rdi # LHS id
         pop %rsi # LHS descriptor
-        cmp $29, %rdi # Assignment
-        jne check_right_side
-
-        # It is an assignment
-        call assignment
-
-    check_right_side:
+        call symbol_check_statement_kind
+        
         pop %rdi # RHS id
         pop %rsi # RHS descriptor
-        cmp $28, %rdi # Statement_list
-        je statement_list
-        cmp $29, %rdi # assignment
-        je do_assignment
+        call symbol_check_statement_kind
 
         # We have reached the end of this function's body
         leave
         ret
 
-.type assignment, @function
-assignment:
+.type symbol_assignment, @function
+symbol_assignment:
         push %rbp
         mov %rsp, %rbp
         # Check if we already have seen this assignment
@@ -195,7 +215,7 @@ set_offset_on_stack:
         pop %rdi
 
         # Check if it already is in there.
-        cmp $0, (%rax)
+        cmpl $0, (%rax)
         jne already_inserted
 
         call increase_symbol_count
@@ -231,7 +251,7 @@ is_symbol_registered:
         push %rbp
         mov %rsp, %rbp
         call locate_symbol
-        cmp $0, (%rax)
+        cmpl $0, (%rax)
         jg true
         movq $0, %rax
         leave
