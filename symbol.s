@@ -1,6 +1,8 @@
 .section .data
 .global symbol_buffer
         symbol_buffer:          .space 256
+.global struct_symbol_buffer
+        struct_symbol_buffer:          .space 256
 .global symbol_offset
         symbol_offset:          .int 0
 
@@ -30,15 +32,15 @@ collect:
         push %rbx
         mov %ebx, (_current_function)(%rip)
         mov %ebx, %edi
-        call set_symbol_table
-        call reset_symbol_count
+        callq set_symbol_table
+        callq reset_symbol_count
         pop %rbx
         movq %rbx, %rdi
         push %rbx
-        call visit_function
+        callq visit_function
 
         movl (_current_function)(%rip), %edi
-        call set_symbol_count
+        callq set_symbol_count
 
 
         pop %rbx
@@ -124,10 +126,17 @@ symbol_struct_decl:
         push $696969
         movq %rsi, %rdi
         call retrieve_struct_decl
-        
-        # I need to figure out to deal with these fields.
-        # 
-
+        pop %rdi # name descriptor
+        call set_offset_on_stack
+        pop %rdx # field cound
+        # Increase the offset by rdx - 1 to compensate for the fields in the struct.
+    correct_stack_offset_loop:
+        cmp $1, %rdx
+        je correct_stack_offset_done
+        call increase_symbol_count
+        dec %rdx
+        jmp correct_stack_offset_loop
+    correct_stack_offset_done:
         leave
         ret
 
@@ -206,8 +215,10 @@ symbol_assignment:
         push $696969
         push $696969
         push $696969
+        push $696969
         call retrieve_assignment
-        pop %rdi # identifier
+        pop %rsi # id
+        pop %rdi # descriptor
         call set_offset_on_stack
         leave
         ret
@@ -245,7 +256,6 @@ locate_symbol:
         pop %rdi
         addq $12, %rax
         jmp locate_symbol_loop_begin
-
     return_empty_spot:
         leave
         ret
@@ -253,7 +263,6 @@ locate_symbol:
         pop %rax
         leave
         ret
-
 
 // in rdi: The descriptor for the identifier
 .type set_offset_on_stack, @function
@@ -264,7 +273,6 @@ set_offset_on_stack:
         push %rdi
         call locate_symbol
         pop %rdi
-
         # Check if it already is in there.
         cmpl $0, (%rax)
         jne already_inserted
@@ -283,17 +291,66 @@ set_offset_on_stack:
         ret
 
 // in rdi: the descriptor of the identifier
+// in rsi: token field/identifier
 .global get_offset_on_stack
 .type get_offset_on_stack, @function
 get_offset_on_stack:
         push %rbp
         mov %rsp, %rbp
-        
+        cmp $36, %rsi
+        je get_field_offset
+
         call locate_symbol
         movl 8(%rax), %eax
         cltq # Sign extend. (remove the top 32 bits rax)
         leave
         ret
+    get_field_offset:
+        # Step [1]: Locate the symbol
+        # Step [2]: Locate the field offset
+        push $696969
+        push $696969
+        call retrieve_field_access
+        pop %rdi # variable descriptor
+        push %rdi
+        call locate_symbol
+        movl 8(%rax), %r13d
+        pop %rdi
+        # Get the char * for the field name
+        call retrieve_identifier
+        movq %rax, %r11
+
+
+        pop %rdi # field descriptor
+        # Find the correct struct type by name
+        call find_struct_type_by_name
+        movq %rax, %rdi
+        push $696969
+        push $696969
+        push $696969
+        call retrieve_struct_decl
+        pop %rdi # name descriptor
+        pop %rdi # field count
+        pop %rdi # field descriptor *
+        # Count the offset for the field in the struct decl.
+    add_offset_loop:
+        push %rdi
+        movl (%rdi), %edi
+        call retrieve_identifier
+        movq %rax, %rsi
+        movq %r11, %rdi
+        call cmp_string
+        cmp $1, %rax
+        je found_correct_offset
+
+        add $1, %r13d
+        jne add_offset_loop
+    found_correct_offset:
+        mov %r13d, %eax
+        cltq
+        leave
+        ret
+
 
 // in rdi: the descriptor of the identifier
 // Im kinda assumning that it fills with zeros......

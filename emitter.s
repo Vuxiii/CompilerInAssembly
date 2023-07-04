@@ -279,13 +279,16 @@ visit_statement:
         push $696969
         push $696969
         push $696969
+        push $696969
         movq %rsi, %rdi
         call retrieve_assignment
+        pop %rbx
         pop %rax
         pop %rdi # expr id
         pop %rsi # expr descriptor
         push %rax # Store the descripor for the identifier
-
+        push %rbx # Store the type of the identifier/field
+        
         call visit_expression
 
         call emit_newline_tab
@@ -297,8 +300,9 @@ visit_statement:
         call emit_rax
         call emit_comma
         call emit_minus
-
-        pop %rdi
+        
+        pop %rsi # field or identifier
+        pop %rdi # descriptor
         call emit_var
 
         leave
@@ -433,46 +437,25 @@ visit_expression:
     insert_equals:
         call insert_comparison_prologue
         call emit_cmove
-        call emit_rdx
-        call emit_comma
-        call emit_rcx
-        call emit_push
-        call emit_rcx
-        call emit_newline_tab
+        call insert_comparison_epilogue
         leave 
         ret
     insert_noteq:
         call insert_comparison_prologue
         call emit_cmovz
-        call emit_rdx
-        call emit_comma
-        call emit_rcx
-        call emit_push
-        call emit_rcx
-        call emit_newline_tab
+        call insert_comparison_epilogue
         leave 
         ret
     insert_less:
         call insert_comparison_prologue
         call emit_cmovl
-        call emit_rdx
-        call emit_comma
-        call emit_rcx
-        call emit_push
-        call emit_rcx
-        call emit_newline_tab
+        call insert_comparison_epilogue
         leave 
         ret
     insert_greater:
         call insert_comparison_prologue
         call emit_cmovg
-        call emit_rdx
-        call emit_comma
-        call emit_rcx
-        call emit_push
-        call emit_rcx
-        call emit_newline_tab
-        leave 
+        call insert_comparison_epilogue
         ret
     insert_comparison_prologue:
         push %rbp
@@ -501,9 +484,23 @@ visit_expression:
 
         leave
         ret
+    insert_comparison_epilogue:
+        push %rbp
+        mov %rsp, %rbp
+
+        call emit_rdx
+        call emit_comma
+        call emit_rcx
+        call emit_push
+        call emit_rcx
+        call emit_newline_tab
+
+        leave
+        ret
     
 
 // in rdi: the descriptor of the identifier
+// in rsi: the type of the field/identifier
 .type emit_var, @function
 emit_var:
         push %rbp

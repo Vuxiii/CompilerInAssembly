@@ -39,6 +39,9 @@ expression : 'identifier' '(' ')'
            | 'identifier' '.' 'identifier'
            | 'identifier'
 
+field      : 'identifier'
+           | 'identifier' '.' field
+
 binary_op  : '+'
            | '-'
            | '*'
@@ -92,6 +95,7 @@ statement_list:  descriptor
 
 assignment:      descriptor
     type: 29
+    ident->type: token_id
     identifier:  descriptor
     expr->type:  token_id
     expr:        descriptor
@@ -128,6 +132,17 @@ array_expr: size = 4
     type: 34
     count:       descriptor
 
+field_access: size = 8
+    type: 36
+    struct name: descriptor
+    field:       descriptor
+
+struct_type_list_buffer: size = 8
+    [(name_descriptor, struct_descriptor),...]
+
+field_acces_list_buffer: size = 8
+    [(structname_Descriptor, field_descriptor),...]
+
 struct_list_buffer: size = 8 + 4 * count
     [(name_descriptor, count_int, field_descriptor[] ),...]
 
@@ -146,5 +161,5 @@ statement_list_buffer: size = 16
 binary_op_buffer: size = 20
     [(lhs_id, lhs_descriptor, operator_id, rhs_id, rhs_descriptor),...]
 
-assignment_buffer: size = 12
-    [(identifier_id, expr_id, expr_descriptor),...]
+assignment_buffer: size = 16
+    [(ident_id, identifier_descriptor, expr_id, expr_descriptor),...]

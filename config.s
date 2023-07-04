@@ -15,8 +15,8 @@
         input_buffer: .space 30
 .global in
         // in:         .asciz "William EOP"
-        // in:         .asciz "def main() { if ( 1000+2 < 3 ) { var1 = 3 } if (3+3 == 2) { var2 = 3 var3 = 1724687 } var4 = 234 + 4244 } EOP"
-        in:         .asciz "def main() { struct point { x, y } } EOP"
+        // in:         .asciz "def main() { if ( 1000+2 < 3 ) { var1 = 3 } if (3+3 == 2) { vmaar2 = 3 var3 = 69 } var4 = 234 + 4244 } EOP"
+        in:         .asciz "def main() { struct point { x, y } struct point p1 p1.x = 2 } EOP"
         // in:         .asciz "def main() { a = 300 + 6 } EOP"
         // in:         .asciz "a = 4 + 6 b = 42 + 69 EOP"
         // in:         .asciz "= def == ( ) if { } [] print while +- /    * < > && let || willi EOP"
@@ -82,6 +82,8 @@
         token_noteq:      .asciz "!="    # 27
 .global token_comma
         token_comma:      .asciz ","     # 35
+.global token_dot
+        token_dot:        .asciz "."     # 37
 
 .global number_0
         number_0:   .asciz "0" # value: 48

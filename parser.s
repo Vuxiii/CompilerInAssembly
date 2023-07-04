@@ -27,8 +27,12 @@ _peek_data_:                    .int 0
 
 
 
+.global struct_type_buffer
+        struct_type_buffer:        .space 256
 .global struct_buffer
         struct_buffer:        .space 256
+.global field_access_buffer
+        field_access_buffer:        .space 256
 .global function_buffer
         function_buffer:        .space 256
 .global if_buffer
@@ -41,12 +45,14 @@ _peek_data_:                    .int 0
         assignment_buffer:      .space 256
 .global binary_op_buffer
         binary_op_buffer:       .space 256
+field_access_offset:               .int 0
 binary_op_offset:               .int 0
 assignment_offset:              .int 0
 statement_list_offset:          .int 0
 if_offset:                      .int 0
 while_offset:                   .int 0
-struct_offset:                   .int 0
+struct_offset:                  .int 0
+struct_type_offset:             .int 0
 .global function_offset
         function_offset:        .int 0
 
@@ -145,7 +151,10 @@ parse_statement:
             call construct_struct_decl_node
             push $33
             push %rax
-            
+            movq %rax, %rdi
+            movq %r10, %rsi
+            call construct_struct_type
+
             jmp check_statement_list
         
         struct_assign:
@@ -156,6 +165,7 @@ parse_statement:
             push %rax # struct name
             call peek_token_data
             push %rax # variable name
+            jmp check_statement_list
 
     while_statement:
         # eat the while
@@ -290,12 +300,15 @@ parse_statement:
         # current_token_id: identifier
         call peek_token_id
         cmp $4, %rax # Is it '='?
-        jne node_is_not_statement # Handle other possibilities like function calls here
+        jne assignment_check_field # Handle other possibilities like function calls here
 
         # current_token_id: identifier
         # peek_token_id:    '='
+        call current_token_id
+        push %rax
         call current_token_data
         push %rax
+    
         call next_token
         # Parse the right hand side of the assignment
         call parse_expression
@@ -310,6 +323,7 @@ parse_statement:
         # │   identifier   │
         # │      ...       │
         # └────────────────┘
+        pop %rcx
         pop %rdx
         pop %rsi
         pop %rdi
@@ -354,6 +368,35 @@ parse_statement:
     statement_is_not_assignment_restore_last_token:
         pop %rbx
         pop %rax
+        leave
+        ret
+    assignment_check_field:
+        cmp $37, %rax
+        jne node_is_not_statement
+        # We know it is a field now.
+        # Current: identifier struct name
+        # peek: '.'
+        call current_token_data
+        push %rax
+        call next_token
+        # Current: '.'
+        # peek: identifier field name
+        call next_token
+        call current_token_data
+        push %rax
+
+        # We now have the following:
+        # │field descriptor│
+        # │ var descriptor │ 
+        # │      ...       │
+        # └────────────────┘
+        pop %rsi
+        pop %rdi
+        call construct_field_access_node
+
+        push $36
+        push %rax
+        
         leave
         ret
     node_is_not_statement:
@@ -560,11 +603,38 @@ parse_expression:
             leave
             ret
 
+// in rdi: struct descriptor
+// in rsi: name descriptor
+.type construct_struct_type, @function
+construct_struct_type:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov struct_type_offset(%rip), %eax
+        push %rax
+        
+        movq $8, %rdx # Size of struct_type (16 bytes)
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea struct_type_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+
+        pop %rax
+        inc %eax
+        # Store next available descriptor 
+        mov %eax, (struct_type_offset)(%rip)
+        
+        leave
+        ret
+
+
 // in rdi: lhs id
 // in rsi: lhs descriptor
 // in rdx: rhs id
 // in rcx: rhs descriptor
-// out:    assignment descriptor
+// out:    token descriptor
 .type construct_statement_list, @function
 construct_statement_list:
         push %rbp
@@ -576,7 +646,7 @@ construct_statement_list:
         mov statement_list_offset(%rip), %eax
         push %rax # Store so we can return the descriptor
         push %rdx # mulq uses rdx...
-        movq $16, %rdx # Size of assignment (16 bytes)
+        movq $16, %rdx # Size of statementlist (16 bytes)
         mulq %rdx
         mov %rax, %rbx
         pop %rdx
@@ -597,9 +667,10 @@ construct_statement_list:
         leave
         ret
 
-// in rdi: identifier_descriptor
-// in rsi: expr_id
-// in rdx: expr_descriptor
+// in rdi: identifier_id
+// in rsi: identifier_descriptor
+// in rdx: expr_id
+// in rcx: expr_descriptor
 // out:    assignment descriptor
 .type construct_assignment_node, @function
 construct_assignment_node:
@@ -611,16 +682,17 @@ construct_assignment_node:
         mov assignment_offset(%rip), %eax
         push %rax # Store so we can return the descriptor
         push %rdx # mulq uses rdx...
-        movq $12, %rdx # Size of assignment (12 bytes)
+        movq $16, %rdx # Size of assignment (16 bytes)
         mulq %rdx
         mov %rax, %rbx
         pop %rdx
         # We now have the correct offset into the buffer
         # Load buffer
         lea assignment_buffer(%rip), %rax
-        mov %edi, (%rax, %rbx)
-        mov %esi, 4(%rax, %rbx)
-        mov %edx, 8(%rax, %rbx)
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+        mov %edx,  8(%rax, %rbx)
+        mov %ecx, 12(%rax, %rbx)
 
         pop %rax # Restore descriptor
         movq %rax, %rbx
@@ -632,11 +704,43 @@ construct_assignment_node:
         ret
 
 
+// in rdi: variable descriptor
+// in rsi: field descriptor
+// out:    field_access descriptor
+.type construct_field_access_node, @function
+construct_field_access_node:
+        push %rbp
+        mov %rsp, %rbp
+        xor %rbx, %rbx
+        xor %rax, %rax
+        # Compute correct offst into buffer
+        mov field_access_offset(%rip), %eax
+        push %rax # Store so we can return the descriptor
+        push %rdx # mulq uses rdx...
+        movq $8, %rdx # Size of field_access (8 bytes)
+        mulq %rdx
+        mov %rax, %rbx
+        pop %rdx
+        # We now have the correct offset into the buffer
+        # Load buffer
+        lea field_access_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+
+        pop %rax # Restore descriptor
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (field_access_offset)(%rip)
+
+        leave
+        ret
+
 // in rdi: struct name identifier
 // in rsi: int * to the field-descriptors
 // in rdx: field cound
 // out:    declaration descriptor
-.type construct_assignment_node, @function
+.type construct_struct_decl_node, @function
 construct_struct_decl_node:
         push %rbp
         mov %rsp, %rbp
@@ -926,10 +1030,79 @@ retrieve_function:
         leave
         ret
 
+// in rdi: Token descriptor
+// out 16(%rbp): name descriptor
+// out 24(%rbp): struct descriptor
+.type retrieve_struct_type, @function
+.global retrieve_struct_type
+retrieve_struct_type:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea struct_type_buffer(%rip), %rax
+        
+        mov   (%rax, %rbx), %edi # name descriptor
+        mov  4(%rax, %rbx), %esi # struct descriptor
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+
+        leave
+        ret
+
+// in rdi:  identifier descriptor
+// out rax: struct_type descriptor
+.type find_struct_type_by_name, @function
+.global find_struct_type_by_name
+find_struct_type_by_name:
+        push %rbp
+        mov %rsp, %rbp 
+
+        call retrieve_identifier
+        movq %rax, %rdi
+
+        mov struct_offset(%rip), %r8d
+        # Total num to check
+        lea struct_type_buffer(%rip), %rsi
+        
+        xor %rcx, %rcx
+    check_next_type:
+        push %rcx
+        push %rsi
+        push %rdi
+        mov (%rsi), %edi
+        call retrieve_identifier
+        movq %rax, %rsi
+        pop %rdi # Restore
+        
+        call cmp_string
+        pop %rsi # Restore struct_type_buffer
+        cmp $1, %rax
+        je found_type
+
+        addq $8, %rsi
+        pop %rcx
+        inc %rcx
+        cmp %r8d, %ecx
+        jne check_next_type
+        # We didn't find it....
+        leave
+        ret
+    found_type:
+        movl 4(%rsi), %eax
+        cltq
+        leave
+        ret
+
+
 // in rdi: token descriptor
-// out  4(%rbp): struct name descriptor
-// out  8(%rbp): field count
-// out 12(%rbp): field descriptor *
+// out 16(%rbp): struct name descriptor
+// out 24(%rbp): field count
+// out 32(%rbp): field descriptor *
 .type retrieve_struct_decl, @function
 .global retrieve_struct_decl
 retrieve_struct_decl:
@@ -949,24 +1122,50 @@ retrieve_struct_decl:
         # field descriptor *
         addq $8, %rax
         addq %rbx, %rax
-        mov %edi, 16(%rbp)
-        mov %esi, 24(%rbp)
+        mov %edi,  16(%rbp)
+        mov %esi,  24(%rbp)
         movq %rax, 32(%rbp)
 
         leave
         ret
 
 // in rdi: token descriptor
-// out  4(%rbp): identifier descriptor
-// out  8(%rbp): expr id
-// out 12(%rbp): expr descriptor
+// out 16(%rbp): var descriptor
+// out 24(%rbp): field descriptor
+.type retrieve_field_access, @function
+.global retrieve_field_access
+retrieve_field_access:
+        push %rbp
+        mov %rsp, %rbp
+        mov %rdi, %rax
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea field_access_buffer(%rip), %rax
+        xor %rdi, %rdi
+        xor %rsi, %rsi
+        mov   (%rax, %rbx), %edi # identifier descriptor
+        mov  4(%rax, %rbx), %esi # field descriptor
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+
+        leave
+        ret
+
+// in rdi: token descriptor
+// out 16(%rbp): identifier id
+// out 24(%rbp): identifier descriptor
+// out 32(%rbp): expr id
+// out 40(%rbp): expr descriptor
 .type retrieve_assignment, @function
 .global retrieve_assignment
 retrieve_assignment:
         push %rbp
         mov %rsp, %rbp 
         mov %rdi, %rax
-        movq $12, %rdx
+        movq $16, %rdx
         mulq %rdx
         mov %rax, %rbx
 
@@ -974,21 +1173,24 @@ retrieve_assignment:
         xor %rdi, %rdi
         xor %rsi, %rsi
         xor %rdx, %rdx
-        mov   (%rax, %rbx), %edi # identifier descriptor
-        mov  4(%rax, %rbx), %esi # expr id
-        mov  8(%rax, %rbx), %edx # expr descriptor
+        xor %rcx, %rcx
+        mov   (%rax, %rbx), %edi # identifier id
+        mov  4(%rax, %rbx), %esi # identifier descriptor
+        mov  8(%rax, %rbx), %edx # expr id
+        mov 12(%rax, %rbx), %ecx # expr descriptor
         
         mov %edi, 16(%rbp)
         mov %esi, 24(%rbp)
         mov %edx, 32(%rbp)
+        mov %ecx, 40(%rbp)
 
         leave
         ret
 // in rdi: token descriptor
-// out  4(%rbp): guard id
-// out  8(%rbp): guard descriptor
-// out 12(%rbp): body id
-// out 16(%rbp): body descriptor
+// out 16(%rbp): guard id
+// out 24(%rbp): guard descriptor
+// out 32(%rbp): body id
+// out 40(%rbp): body descriptor
 .type retrieve_if, @function
 .global retrieve_if
 retrieve_if:
@@ -1018,10 +1220,10 @@ retrieve_if:
         ret
 
 // in rdi: token descriptor
-// out  4(%rbp): guard id
-// out  8(%rbp): guard descriptor
-// out 12(%rbp): body id
-// out 16(%rbp): body descriptor
+// out 16(%rbp): guard id
+// out 24(%rbp): guard descriptor
+// out 32(%rbp): body id
+// out 40(%rbp): body descriptor
 .type retrieve_while, @function
 .global retrieve_while
 retrieve_while:
