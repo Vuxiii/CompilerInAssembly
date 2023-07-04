@@ -13,10 +13,18 @@ func_def   : 'def' '(' param_list ')' statement
 param_list : 'identifier'
            | 'identifier' ',' param_list
 
-var_decl   : 'let' 'identifier' '=' expression
-var_assign : 'identifier' '=' expression
+arg_list   : expression
+           | expression ',' arg_list
 
-statement  : var_decl
+struct_decl : 'struct' 'identifier' '{' param_list '}'
+
+struct_assign : 'struct' 'identifier' 'identifier' '=' '{' arg_list '}'
+var_assign    : 'identifier' '=' expression
+
+array_assign  : 'struct' 'identifier' 'identifier' '=' '[' 'number' ']'
+              | 'identifier' '=' '[' 'number' ']'
+
+statement  : struct_assign
            | var_assign
            | func_def
            | '{' statement_list '}'
@@ -28,6 +36,7 @@ expression : 'identifier' '(' ')'
            | expression binary_op expression
            | '(' expression ')'
            | 'number'
+           | 'identifier' '.' 'identifier'
            | 'identifier'
 
 binary_op  : '+'
@@ -39,9 +48,7 @@ binary_op  : '+'
            | '||'
            | '&&'
            | '=='
-
-arg_list   : expression
-           | expression ',' arg_list
+           | '!='
 ```
 
 ## Symbol Collection & Stack Offsets
@@ -110,6 +117,19 @@ while_statement: descriptor
     guard:       descriptor
     body->type:  token_id
     body:        descriptor
+
+struct_decl: size = 8 + 4 * count
+    type: 33
+    name:        descriptor
+    count:       int
+    fields:      descriptor[]
+
+array_expr: size = 4
+    type: 34
+    count:       descriptor
+
+struct_list_buffer: size = 8 + 4 * count
+    [(name_descriptor, count_int, field_descriptor[] ),...]
 
 while_list_buffer: size = 16
     [(guard_id, guard_descriptor, body_id, body_descriptor),...]

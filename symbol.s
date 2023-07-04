@@ -90,6 +90,8 @@ symbol_check_statement_kind:
         je symbol_check_call_if
         cmp $32, %rdi
         je symbol_check_call_while
+        cmp $33, %rdi
+        je symbol_check_call_struct_decl
 
         # Found nothing. Return...
         jmp symbol_check_statement_kind_end
@@ -105,7 +107,27 @@ symbol_check_statement_kind:
     symbol_check_call_while:
         call symbol_while
         jmp symbol_check_statement_kind_end
+    symbol_check_call_struct_decl:
+        call symbol_struct_decl
+        jmp symbol_check_statement_kind_end
     symbol_check_statement_kind_end:
+        leave
+        ret
+
+.type symbol_struct_decl, @function
+symbol_struct_decl:
+        push %rbp
+        movq %rsp, %rbp
+
+        push $696969
+        push $696969
+        push $696969
+        movq %rsi, %rdi
+        call retrieve_struct_decl
+        
+        # I need to figure out to deal with these fields.
+        # 
+
         leave
         ret
 
@@ -231,6 +253,7 @@ locate_symbol:
         pop %rax
         leave
         ret
+
 
 // in rdi: The descriptor for the identifier
 .type set_offset_on_stack, @function

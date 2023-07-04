@@ -232,6 +232,12 @@ identify_token:
         je return_rcurly_token
 
         movq %rdx, %rdi
+        movq $token_comma, %rsi
+        callq cmp_string
+        cmp $1, %ax
+        je return_comma_token
+
+        movq %rdx, %rdi
         movq $token_print, %rsi
         callq cmp_string
         cmp $1, %ax
@@ -372,6 +378,12 @@ identify_token:
 
             movq $0, %rbx
             movq $8, %rax
+            ret
+        return_comma_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $35, %rax
             ret
         return_lbracket_token:
             movq %rdi, (buffer_address)(%rip)

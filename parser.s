@@ -27,6 +27,8 @@ _peek_data_:                    .int 0
 
 
 
+.global struct_buffer
+        struct_buffer:        .space 256
 .global function_buffer
         function_buffer:        .space 256
 .global if_buffer
@@ -44,6 +46,7 @@ assignment_offset:              .int 0
 statement_list_offset:          .int 0
 if_offset:                      .int 0
 while_offset:                   .int 0
+struct_offset:                   .int 0
 .global function_offset
         function_offset:        .int 0
 
@@ -83,8 +86,76 @@ parse_statement:
         je if_statement
         cmp $12, %rax
         je while_statement
+        cmp $21, %rax
+        je struct_statement
 
         jmp node_is_not_statement
+
+    struct_statement:
+            # We need to determine if this is a struct declaration or an assignment
+            # We do this by checking for the number og identifiers token
+            # [1]: A single identifier -> assign
+            # [2]: Two identifiers -> decl
+
+            # eat the struct
+            call next_token
+            # eat the first identifier
+            call next_token
+            
+            # Is the next token an '{' or an 'identifier'
+            call peek_token_id
+            cmp $24, %rax
+            je struct_assign
+            
+            # This is a struct declaration
+            # Store the identifier for the struct definition
+            call current_token_data
+            movq %rax, %r10
+
+
+            # Parse the identifiers seperated by ','
+            # Count the number of identifiers
+            xor %r8, %r8
+        struct_field_count:
+            inc %r8
+            # We have: current -> Identifier
+            #          peek    -> ',' or '}'
+
+            # eat the seperator: '{' ',' '}'
+            call next_token
+            call peek_token_id # Just to check....
+            call peek_token_data
+            push %rax # Store the field descriptor
+
+            call next_token
+
+            call peek_token_id
+            cmp $35, %rax
+            je struct_field_count 
+
+            # eat the '}'
+            call next_token
+
+            # We have length in rcx
+            # We have each field identifier on the stack
+            # We can load the address of the stack, and pass it to the constructor method
+            mov %r10, %rdi
+            leaq (%rsp), %rsi
+            mov %r8, %rdx
+            call construct_struct_decl_node
+            push $33
+            push %rax
+            
+            jmp check_statement_list
+        
+        struct_assign:
+
+            # This is an assignment
+
+            call current_token_data
+            push %rax # struct name
+            call peek_token_data
+            push %rax # variable name
 
     while_statement:
         # eat the while
@@ -560,6 +631,59 @@ construct_assignment_node:
         leave
         ret
 
+
+// in rdi: struct name identifier
+// in rsi: int * to the field-descriptors
+// in rdx: field cound
+// out:    declaration descriptor
+.type construct_assignment_node, @function
+construct_struct_decl_node:
+        push %rbp
+        mov %rsp, %rbp
+        xor %rbx, %rbx
+        xor %rax, %rax
+        # Compute correct offst into buffer
+        mov struct_offset(%rip), %eax
+        push %rax # Store so we can return the descriptor
+        push %rdx # Store the length.
+
+        push %rdx # mulq uses rdx...
+        movq $4, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+        
+        pop %rdx
+        # We now have the correct offset into the buffer
+        # Load buffer
+        lea struct_buffer(%rip), %rax
+        mov %edi, (%rax, %rbx) # name
+        mov %edx, 4(%rax, %rbx) # count
+        
+        # We need to go through the pointer rdx times. Offset between each is 8 bytes, because we are using the stack.
+        addq %rbx, %rax
+        addq $8, %rax
+
+    struct_insert_loop_begin:
+        mov (%rsi), %edi
+        mov %edi, (%rax)
+        addq $8, %rsi # 64 bit (stack)
+        addq $4, %rax # 32 bit (array)
+        dec %rdx
+        test %rdx, %rdx
+        jnz struct_insert_loop_begin
+
+        
+
+        pop %rbx # Restore the #fields
+        pop %rax # Restore descriptor
+        addq $2, %rbx # Add 4*2 bytes for the two ints
+        addq %rax, %rbx # Add the length
+        # Store next available descriptor 
+        mov %ebx, (struct_offset)(%rip)
+
+        leave
+        ret
+
 // in rdi: rhs token_id
 // in rsi: rhs token_descriptor
 // in rdx: operator_id
@@ -798,6 +922,36 @@ retrieve_function:
         mov %edx, 32(%rbp)
         mov %ecx, 40(%rbp)
         mov %r8d, 48(%rbp)
+
+        leave
+        ret
+
+// in rdi: token descriptor
+// out  4(%rbp): struct name descriptor
+// out  8(%rbp): field count
+// out 12(%rbp): field descriptor *
+.type retrieve_struct_decl, @function
+.global retrieve_struct_decl
+retrieve_struct_decl:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $4, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea struct_buffer(%rip), %rax
+        xor %rdi, %rdi
+        xor %rsi, %rsi
+        xor %rdx, %rdx
+        mov   (%rax, %rbx), %edi # struct name descriptor
+        mov  4(%rax, %rbx), %esi # field count
+        # field descriptor *
+        addq $8, %rax
+        addq %rbx, %rax
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+        movq %rax, 32(%rbp)
 
         leave
         ret
