@@ -137,6 +137,11 @@ field_access: size = 8
     struct name: descriptor
     field:       descriptor
 
+struct_instance: size = 8
+    type: 38
+    struct name: descriptor
+    var name: descriptor
+
 struct_type_list_buffer: size = 8
     [(name_descriptor, struct_descriptor),...]
 

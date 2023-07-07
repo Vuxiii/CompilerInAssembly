@@ -42,7 +42,7 @@ collect:
         movl (_current_function)(%rip), %edi
         callq set_symbol_count
 
-
+    testlabel:
         pop %rbx
         pop %rcx
         inc %rbx
@@ -94,6 +94,8 @@ symbol_check_statement_kind:
         je symbol_check_call_while
         cmp $33, %rdi
         je symbol_check_call_struct_decl
+        cmp $38, %rdi
+        je symbol_check_call_struct_instance
 
         # Found nothing. Return...
         jmp symbol_check_statement_kind_end
@@ -112,23 +114,38 @@ symbol_check_statement_kind:
     symbol_check_call_struct_decl:
         call symbol_struct_decl
         jmp symbol_check_statement_kind_end
+    symbol_check_call_struct_instance:
+        call symbol_struct_instance
+        jmp symbol_check_statement_kind_end
     symbol_check_statement_kind_end:
         leave
         ret
 
-.type symbol_struct_decl, @function
-symbol_struct_decl:
+.type symbol_struct_instance, @function
+symbol_struct_instance:
         push %rbp
         movq %rsp, %rbp
-
-        push $696969
-        push $696969
-        push $696969
+        
+        push $696969 # identifier descriptor
+        push $696969 # struct descriptor
         movq %rsi, %rdi
-        call retrieve_struct_decl
-        pop %rdi # name descriptor
+        call retrieve_struct_instance
+        
+        pop %rsi # Struct descriptor
+        pop %rdi # var descriptor
+        push %rsi
         call set_offset_on_stack
-        pop %rdx # field cound
+        
+        pop %rdi # Struct descriptor
+        
+        push $696969 # field descriptor *
+        push $696969 # field count
+        push $696969 # struct name identifier
+
+        call retrieve_struct_decl
+
+        pop %rdi # struct var descriptor
+        pop %rdx # field count
         # Increase the offset by rdx - 1 to compensate for the fields in the struct.
     correct_stack_offset_loop:
         cmp $1, %rdx
@@ -137,6 +154,15 @@ symbol_struct_decl:
         dec %rdx
         jmp correct_stack_offset_loop
     correct_stack_offset_done:
+        leave
+        ret
+
+.type symbol_struct_decl, @function
+symbol_struct_decl:
+        push %rbp
+        movq %rsp, %rbp
+
+       
         leave
         ret
 
@@ -218,8 +244,13 @@ symbol_assignment:
         push $696969
         call retrieve_assignment
         pop %rsi # id
+        cmp $24, %rsi
+        jne symbol_assignment_skip_field_access
         pop %rdi # descriptor
         call set_offset_on_stack
+        leave
+        ret
+    symbol_assignment_skip_field_access:
         leave
         ret
 
@@ -311,17 +342,19 @@ get_offset_on_stack:
         push $696969
         push $696969
         call retrieve_field_access
-        pop %rdi # variable descriptor
-        push %rdi
-        call locate_symbol
-        movl 8(%rax), %r13d
-        pop %rdi
-        # Get the char * for the field name
+        pop %rsi # variable descriptor
+        pop %rdi # field descriptor
+        push %rsi
         call retrieve_identifier
         movq %rax, %r11
-
-
-        pop %rdi # field descriptor
+        
+        pop %rdi
+        push %rdi
+        call locate_symbol
+        movl 8(%rax), %r13d # The base offset
+        pop %rdi
+        
+        # pop %rdi # field descriptor
         # Find the correct struct type by name
         call find_struct_type_by_name
         movq %rax, %rdi
@@ -342,7 +375,8 @@ get_offset_on_stack:
         call cmp_string
         cmp $1, %rax
         je found_correct_offset
-
+        pop %rdi
+        addq $4, %rdi
         add $1, %r13d
         jne add_offset_loop
     found_correct_offset:
@@ -411,7 +445,7 @@ set_symbol_table:
 .type set_symbol_count, @function
 set_symbol_count:
         push %rbp
-        mov %rsp, %rbp
+        movq %rsp, %rbp
         xor %rax, %rax
         movl %edi, %eax
         movq $20, %rdx

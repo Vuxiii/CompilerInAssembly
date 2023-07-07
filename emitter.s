@@ -92,7 +92,7 @@ visit_statement:
         je visit_if
         cmp $32, %rdi
         je visit_while
-
+        # Insert 38 for struct instance
         leave
         ret
 
@@ -300,7 +300,7 @@ visit_statement:
         call emit_rax
         call emit_comma
         call emit_minus
-        
+
         pop %rsi # field or identifier
         pop %rdi # descriptor
         call emit_var
@@ -321,7 +321,8 @@ visit_expression:
         je number
         cmp $24, %rdi # identifier
         je identifier
-
+        cmp $36, %rdi # field
+        je identifier
         # It was neither a binary op nor a number
         leave 
         ret
@@ -376,10 +377,29 @@ visit_expression:
         ret
 
     identifier:
+        push %rdi
         push %rsi
         call emit_mov
         call emit_minus
         
+        pop %rdi
+        pop %rdi
+        call emit_var
+
+        call emit_comma
+        call emit_rax
+        call emit_push
+        call emit_rax
+        leave
+        ret
+
+    field:
+        push %rdi
+        push %rsi
+        call emit_mov
+        call emit_minus
+        
+        pop %rdi
         pop %rdi
         call emit_var
 
