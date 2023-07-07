@@ -342,8 +342,8 @@ get_offset_on_stack:
         push $696969
         push $696969
         call retrieve_field_access
-        pop %rsi # variable descriptor
-        pop %rdi # field descriptor
+        pop %rsi # field descriptor
+        pop %rdi # variable descriptor
         push %rsi
         call retrieve_identifier
         movq %rax, %r11
@@ -354,7 +354,6 @@ get_offset_on_stack:
         movl 8(%rax), %r13d # The base offset
         pop %rdi
         
-        # pop %rdi # field descriptor
         # Find the correct struct type by name
         call find_struct_type_by_name
         movq %rax, %rdi

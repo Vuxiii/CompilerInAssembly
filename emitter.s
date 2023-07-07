@@ -383,7 +383,7 @@ visit_expression:
         call emit_minus
         
         pop %rdi
-        pop %rdi
+        pop %rsi
         call emit_var
 
         call emit_comma
@@ -400,7 +400,7 @@ visit_expression:
         call emit_minus
         
         pop %rdi
-        pop %rdi
+        pop %rsi
         call emit_var
 
         call emit_comma

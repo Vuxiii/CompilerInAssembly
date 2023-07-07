@@ -646,8 +646,8 @@ parse_expression:
             call next_token # eat '.'
             call next_token # eat 'identifier' - field
             call current_token_data
-            movq %rax, %rdi
-            pop %rsi
+            movq %rax, %rsi
+            pop %rdi
             call construct_field_access_node
             movq %rax, %rbx
             movq $36, %rax
