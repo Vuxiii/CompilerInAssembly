@@ -26,7 +26,10 @@ _token_data_:                   .int 0
 _peek_data_:                    .int 0
 
 
-
+.global array_assignment_buffer
+        array_assignment_buffer: .space 256
+.global array_access_buffer
+        array_access_buffer: .space 256
 .global print_statement_buffer
         print_statement_buffer: .space 256
 .global struct_instance_buffer
@@ -59,6 +62,8 @@ struct_offset:                  .int 0
 struct_type_offset:             .int 0
 struct_instance_offset:         .int 0
 print_statement_offset:         .int 0
+array_access_offset:            .int 0
+array_assignment_offset:        .int 0
 .global function_offset
         function_offset:        .int 0
 
@@ -325,7 +330,6 @@ parse_statement:
 
         # Remove the '}'
         call next_token
-        call next_token
 
         # We have a good function. Construct it and return
 
@@ -340,13 +344,16 @@ parse_statement:
 
     maybe_assignment:
         // Check the assignment '='
+        
         call next_token
         # current_token_id: identifier
         call peek_token_id
         cmp $37, %rax # dot '.'
         je assignment_field_acces
-        cmp $4, %rax # Is it '='?
-        jne assignment_check_field # Handle other possibilities like function calls here
+        cmp $9, %rax # Is it '['
+        je assignment_array_identifier
+
+        # We now assume '='
 
         # current_token_id: identifier
         # peek_token_id:    '='
@@ -416,6 +423,46 @@ parse_statement:
         pop %rax
         leave
         ret
+    assignment_array_identifier:
+        # Store identifier
+        call current_token_data
+        push %rax
+        call next_token
+        # Current: '['
+        # Peek MUST be a number.
+        # TODO! Add error handling here.
+        # For now, just assume it is a number
+
+        call peek_token_data
+        push %rax
+
+        # Eat the number and the ']'
+        call next_token
+        call next_token
+
+        # At this point, it can either be an array initialization or an array access. We check this by peeking for '='
+
+        call peek_token_id
+        cmp $4, %rax
+        je assignment_array_identifier_access
+
+        movq $24, %rdi
+        pop %rdx
+        pop %rsi
+        movq $8, %rcx # For now, ints are 8 bytes
+        call construct_array_assignment
+        push $40
+        push %rax
+        jmp check_statement_list
+    assignment_array_identifier_access:
+        
+        movq $24, %rdi
+        pop %rdx # identifier descriptor
+        pop %rsi # index
+        call construct_array_access
+        push $41
+        push %rax
+        jmp assignment_parse_rhs
     assignment_field_acces:
         call current_token_data
         push %rax # Store the variable descriptor
@@ -432,37 +479,6 @@ parse_statement:
         push %rax
         call next_token
         jmp assignment_parse_rhs
-        # Should never reach this point
-
-    assignment_check_field:
-        cmp $37, %rax
-        jne node_is_not_statement
-        # We know it is a field now.
-        # Current: identifier struct name
-        # peek: '.'
-        call current_token_data
-        push %rax
-        call next_token
-        # Current: '.'
-        # peek: identifier field name
-        call next_token
-        call current_token_data
-        push %rax
-
-        # We now have the following:
-        # │field descriptor│
-        # │ var descriptor │ 
-        # │      ...       │
-        # └────────────────┘
-        pop %rsi
-        pop %rdi
-        call construct_field_access_node
-
-        push $36
-        push %rax
-        
-        leave
-        ret
     node_is_not_statement:
         movq $0, %rax # None
         leave
@@ -748,6 +764,78 @@ construct_statement_list:
         inc %ebx
         # Store next available descriptor 
         mov %ebx, (statement_list_offset)(%rip)
+
+        leave
+        ret
+
+
+// in rdi: identifier type
+// in rsi: identifier descriptor
+// in rdx: count
+// in rcx: stride
+// out:    token descriptor
+.type construct_array_assignment, @function
+construct_array_assignment:
+        push %rbp
+        mov %rsp, %rbp
+        
+        xor %rbx, %rbx
+        xor %rax, %rax
+        # Compute correct offst into buffer
+        mov array_assignment_offset(%rip), %eax
+        push %rax # Store so we can return the descriptor
+        push %rdx # mulq uses rdx...
+        movq $16, %rdx # Size of statementlist (16 bytes)
+        mulq %rdx
+        mov %rax, %rbx
+        pop %rdx
+        # We now have the correct offset into the buffer
+        # Load buffer
+        lea array_assignment_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+        mov %edx,  8(%rax, %rbx)
+        mov %ecx, 12(%rax, %rbx)
+
+        pop %rax # Restore descriptor
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (array_assignment_offset)(%rip)
+
+        leave
+        ret
+
+// in rdi: identifier type
+// in rsi: identifier descriptor
+// in rdx: index
+// out:    token descriptor
+.type construct_array_access, @function
+construct_array_access:
+        push %rbp
+        mov %rsp, %rbp 
+        xor %rbx, %rbx
+        xor %rax, %rax
+        mov array_access_offset(%rip), %eax
+        push %rax # Store so we can return the descriptor
+        # Ensure that we are offset by the correct size of each struct -> ebx * sizeof(binaryop) -> ebx * 20 bytes
+        push %rdx # mulq uses rdx...
+        movq $12, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+        pop %rdx
+
+        lea array_access_buffer(%rip), %rax
+        
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+        mov %edx,  8(%rax, %rbx)
+        
+        pop %rax # Restore descriptor
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (array_access_offset)(%rip)
 
         leave
         ret
@@ -1113,6 +1201,63 @@ retrieve_statement_list:
         leave
         ret
 
+
+// in rdi: Token descriptor
+// out 16(%rbp): identifier id
+// out 24(%rbp): identifier descriptor
+// out 32(%rbp): count
+// out 40(%rbp): stride
+.type retrieve_array_assignment, @function
+.global retrieve_array_assignment
+retrieve_array_assignment:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $16, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea array_assignment_buffer(%rip), %rax
+        
+        mov   (%rax, %rbx), %edi # identifier id
+        mov  4(%rax, %rbx), %esi # identifier desc
+        mov  8(%rax, %rbx), %edx # count
+        mov 12(%rax, %rbx), %ecx # stride
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+        mov %edx, 32(%rbp)
+        mov %ecx, 40(%rbp)
+
+        leave
+        ret
+
+// in rdi: token descriptor
+// out 16(%rbp): identifier id
+// out 24(%rbp): identifier descriptor
+// out 32(%rbp): index
+.type retrieve_array_access, @function
+.global retrieve_array_access
+retrieve_array_access:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $12, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea array_access_buffer(%rip), %rax
+        mov   (%rax, %rbx), %edi # identifier id
+        mov  4(%rax, %rbx), %esi # identifier desc
+        mov  8(%rax, %rbx), %edx # index
+
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+        mov %edx, 32(%rbp)
+
+        leave
+        ret
+
 // in rdi: Token descriptor
 // out 16(%rbp): expr id
 // out 24(%rbp): expr descriptor
@@ -1224,6 +1369,49 @@ retrieve_struct_type:
         mov %edi, 16(%rbp)
         mov %esi, 24(%rbp)
 
+        leave
+        ret
+
+// in rdi:  identifier descriptor
+// out rax: assignment descriptor
+.type find_array_assignment_by_identifier, @function
+.global find_array_assignment_by_identifier
+find_array_assignment_by_identifier:
+        push %rbp
+        movq %rsp, %rbp
+        call retrieve_identifier
+        movq %rax, %rdi
+
+        mov assignment_offset(%rip), %r8d
+        # Total num to check
+        lea assignment_buffer(%rip), %rsi
+        addq $8, %rsi # Place offset ontop of identifier descriptor
+
+        xor %rcx, %rcx
+    check_next_array:
+        push %rcx
+        push %rsi
+        push %rdi
+        mov (%rsi), %edi
+        call retrieve_identifier
+        movq %rax, %rsi
+        pop %rdi # Restore
+        
+        call cmp_string
+        pop %rsi
+        cmp $1, %rax
+        je found_array
+
+        addq $16, %rsi
+        pop %rcx
+        inc %rcx
+        cmp %r8d, %ecx
+        jne check_next_array
+        # We didn't find it....
+        leave
+        ret
+    found_array:
+        movq %rcx, %rax
         leave
         ret
 
@@ -1385,6 +1573,7 @@ retrieve_assignment:
 
         leave
         ret
+
 // in rdi: token descriptor
 // out 16(%rbp): guard id
 // out 24(%rbp): guard descriptor

@@ -306,18 +306,14 @@ visit_statement:
 
     visit_assignment:
         // subq $24, %rsp
-        push $696969
-        push $696969
-        push $696969
-        push $696969
+        push $696969 # expression descriptor
+        push $696969 # expression id
+        push $696969 # identifier descriptor
+        push $696969 # identifier id
         movq %rsi, %rdi
         call retrieve_assignment
-        pop %rbx
-        pop %rax
-        pop %rdi # expr id
-        pop %rsi # expr descriptor
-        push %rax # Store the descripor for the identifier
-        push %rbx # Store the type of the identifier/field
+        movq 16(%rsp), %rdi # expr id
+        movq 24(%rsp), %rsi # expr descriptor
         
         call visit_expression
 
@@ -331,8 +327,8 @@ visit_statement:
         call emit_comma
         call emit_minus
 
-        pop %rsi # field or identifier
-        pop %rdi # descriptor
+        movq  (%rsp), %rsi # id
+        movq 8(%rsp), %rdi # descriptor
         call emit_var
 
         leave
@@ -555,10 +551,14 @@ visit_expression:
 emit_var:
         push %rbp
         mov %rsp, %rbp
+        # We need to check if this is array access.
+        cmp $41, %rsi
+        je emit_var_array_access
+
         call get_offset_on_stack
         movq $8, %rdx
         imulq %rdx
-
+        
         movq %rax, %rdi
         call emit_number
 
@@ -567,7 +567,46 @@ emit_var:
         call emit_rparen
         leave
         ret
+    emit_var_array_access:
+        # arr = [0, 1, 2, 3]
+        #    8--^ 16^24^32^
+        # base offset + stride * index 
+        push $69 # index
+        push $69 # identifier descriptor
+        push $69 # identifier id
+        call retrieve_array_access
+        movq  (%rsp), %rsi
+        movq 8(%rsp), %rdi
+        call get_offset_on_stack
+        movq $8, %rdx
+        imulq %rdx
+        push %rax # Base offset
+        
+        movq 24(%rsp), %rdi
+        call retrieve_number
+        push %rax # index
 
+        movq 8(%rsp), %rdi
+        call find_array_assignment_by_identifier
+        movq %rax, %rdi
+        push $69 # stride
+        push $69 # count
+        push $69 # identifier descriptor
+        push $69 # identifier id
+        call retrieve_array_assignment
+
+        movq 24(%rsp), %rbx # stride
+        movq 32(%rsp), %rax # index
+        imulq %rbx
+        movq 40(%rsp), %rdi # base offset
+        addq %rax, %rdi
+        call emit_number
+
+        call emit_lparen
+        call emit_rbp
+        call emit_rparen
+        leave
+        ret
 
 // in rdi: The number to be displayed
 .type emit_number, @function

@@ -96,6 +96,8 @@ symbol_check_statement_kind:
         je symbol_check_call_struct_decl
         cmp $38, %rdi
         je symbol_check_call_struct_instance
+        cmp $40, %rdi
+        je symbol_check_call_array_assignment
 
         # Found nothing. Return...
         jmp symbol_check_statement_kind_end
@@ -117,7 +119,36 @@ symbol_check_statement_kind:
     symbol_check_call_struct_instance:
         call symbol_struct_instance
         jmp symbol_check_statement_kind_end
+    symbol_check_call_array_assignment:
+        call symbol_array_assignment
+        jmp symbol_check_statement_kind_end
     symbol_check_statement_kind_end:
+        leave
+        ret
+
+.type symbol_array_assignment, @function
+symbol_array_assignment:
+        push %rbp
+        movq %rsp, %rbp
+
+        # We want to ensure that we offset enough on the stack.
+        
+        movq %rsi, %rdi
+        push $696969 # stride
+        push $696969 # count
+        push $696969 # identifier descriptor
+        push $696969 # identifier id
+        call retrieve_array_assignment
+
+        movq (%rsp), %rdi
+        call set_offset_on_stack
+
+        movq 16(%rsp), %rdi
+        call retrieve_number
+        movq %rax, %rdi
+        dec %rdi
+        call increase_symbol_count_by
+
         leave
         ret
 
@@ -244,9 +275,30 @@ symbol_assignment:
         push $696969
         call retrieve_assignment
         pop %rsi # id
+        cmp $41, %rsi
+        je symbol_assignment_array_access
         cmp $24, %rsi
         jne symbol_assignment_skip_field_access
         pop %rdi # descriptor
+        call set_offset_on_stack
+        leave
+        ret
+    symbol_assignment_array_access:
+        pop %rdi
+        push $696969 # ignore index
+        push $696969 # descriptor
+        push $696969 # id
+        call retrieve_array_access
+        pop %rsi
+        cmp $24, %rsi
+        je symbol_assignment_array_access_identifier
+        
+        # It is a field access.
+
+        leave
+        ret
+    symbol_assignment_array_access_identifier:
+        pop %rdi # identifier
         call set_offset_on_stack
         leave
         ret
@@ -498,6 +550,19 @@ increase_symbol_count:
         push %rax
         movl _current_symbol_count_(%rip), %eax
         inc %eax
+        movl %eax, _current_symbol_count_(%rip)
+        pop %rax
+        leave
+        ret
+
+// in rdi: amount to increase by
+.type increase_symbol_count_by, @function
+increase_symbol_count_by:
+        push %rbp
+        mov %rsp, %rbp
+        push %rax
+        movl _current_symbol_count_(%rip), %eax
+        addl %edi, %eax
         movl %eax, _current_symbol_count_(%rip)
         pop %rax
         leave

@@ -1,4 +1,3 @@
-
 main: main.o lexer.o config.o utils.o parser.o symbol.o emitter.o astprint.o
 	ld -o main main.o lexer.o parser.o symbol.o emitter.o config.o utils.o astprint.o
 

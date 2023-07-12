@@ -259,8 +259,36 @@ astprint_expr:
         je identifier
         cmp $36, %rdi # field
         je identifier
-        # It was neither a binary op nor a number
+        cmp $41, %rdi # array_access
+        je array_access
         leave 
+        ret
+    array_access:
+        push %rsi
+        call emit_array_access_
+        pop %rdi
+        push $696969 # index
+        push $696969 # descriptor
+        push $696969 # id
+        call retrieve_array_access
+        
+        call emit_arrow
+        call emit_identifier_
+
+        # Check for field or identifier here. (%rsp)
+
+        movq 8(%rsp), %rdi
+        call emit_identifier
+
+        call emit_arrow
+
+        movq 16(%rsp), %rdi
+        call retrieve_number
+        movq %rax, %rdi
+        call emit_number
+
+
+        leave
         ret
     binary:
         push %rsi
@@ -776,6 +804,19 @@ emit_while_:
         movq $1, %rdi
         leaq token_while, %rsi
         movq $5, %rdx
+        syscall
+
+        leave
+        ret
+.type emit_array_access_, @function
+emit_array_access_:
+        push %rbp
+        movq %rsp, %rbp
+
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _astprint_array_access, %rsi
+        movq $12, %rdx
         syscall
 
         leave

@@ -16,7 +16,7 @@
 .global in
         // in:         .asciz "William EOP"
         // in:         .asciz "def main() { if ( 1000+2 < 3 ) { var1 = 3 } if (3+3 == 2) { vmaar2 = 3 var3 = 69 } var4 = 234 + 4244 } EOP"
-        in:.asciz "def main() { if ( 1 == 1) {a = 3 + 8 * 2 print(a+2)}} EOP"
+        in:.asciz "def main() { if (1==1) { print(1) if ( 1 != 1 ) { print(2) } } } EOP"
         // in:.asciz "def run() { a = 42 print(a) } def main() { struct point {x, y, z} struct point p p.x = 69 p.y = 42 p.z = 0 print(0 + p.x) print(0 + p.y) print(p.z+3) run() } EOP"
         // in:.asciz "def main() { struct point {x, y, z} struct point p1  struct point p2 p1.x = 1 p1.y = 2 p1.z = 3 p2.x = p1.x + 1 p2.y = p1.y + 1 p2.z = p1.z + 1 } EOP"
         // in:.asciz "def main() { struct point {x, y} struct point p1 struct point p2 p1.x = p2.x + p1.x } EOP"
@@ -213,6 +213,9 @@
 .global _astprint_desc
         _astprint_desc: .asciz "desc: "
 
+.global _astprint_index
+        _astprint_index: .asciz "index: "
+
 .global _astprint_arrow
         _astprint_arrow: .asciz " -> "
 
@@ -232,4 +235,7 @@
 
 .global _astprint_assignment
         _astprint_assignment: .asciz "Assignment:"
+
+.global _astprint_array_access
+        _astprint_array_access: .asciz "ArrayAccess:"
 

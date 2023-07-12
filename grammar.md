@@ -148,6 +148,25 @@ print_statement: size = 8
     expr->type:  token_id
     expr:        descriptor
 
+array_assignment: size = 16
+    type: 40
+    ident->type: token_id
+    ident->desc: descriptor
+    count:       int
+    stride:      int
+
+array_access: size = 12
+    type: 41
+    ident->type: token_id
+    ident->desc: descriptor
+    index:       int
+
+array_assignment_buffer: size = 16
+    [(ident_type, ident_descriptor, count, stride),...]
+
+array_access_buffer: size = 12
+    [(ident_type, ident_descriptor, index),...]
+
 print_statement_buffer: size = 8
     [(expr_type, expr_descriptor),...]
 
