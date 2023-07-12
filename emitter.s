@@ -381,9 +381,9 @@ visit_expression:
 
         # Both children have now been evaluated
         callq emit_pop
-        callq emit_rbx
-        callq emit_pop
         callq emit_rax
+        callq emit_pop
+        callq emit_rbx
         pop %rdx # Restore operator
         cmp $13, %rdx
         je insert_add
@@ -488,7 +488,7 @@ visit_expression:
         ret
     insert_noteq:
         call insert_comparison_prologue
-        call emit_cmovz
+        call emit_cmovne
         call insert_comparison_epilogue
         leave 
         ret
@@ -502,6 +502,7 @@ visit_expression:
         call insert_comparison_prologue
         call emit_cmovg
         call insert_comparison_epilogue
+        leave
         ret
     insert_comparison_prologue:
         push %rbp
@@ -773,14 +774,14 @@ emit_cmove:
         syscall
         leave
         ret
-.type emit_cmovz, @function
-emit_cmovz:
+.type emit_cmovne, @function
+emit_cmovne:
         push %rbp
         mov %rsp, %rbp 
         movq $1, %rax
         movq $1, %rdi
-        leaq _emit_cmovz, %rsi
-        movq $9, %rdx
+        leaq _emit_cmovne, %rsi
+        movq $10, %rdx
         syscall
         leave
         ret
