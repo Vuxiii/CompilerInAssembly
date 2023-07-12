@@ -66,11 +66,21 @@ emit:
         call emit_main
         call emit_asm_epilogue
         
+        
 
         pop %rsi
         pop %rdi
         call visit_statement
 
+
+        # My print implementation
+        # Expects value to print in rdi
+        call emit_newline
+        call emit_print
+        call emit_colon
+        call emit_function_prologue
+        call emit_print_body
+        call emit_function_epilogue
 
         leave
         ret
@@ -92,10 +102,30 @@ visit_statement:
         je visit_if
         cmp $32, %rdi
         je visit_while
-        # Insert 38 for struct instance
+        cmp $39, %rdi
+        je visit_print
         leave
         ret
 
+    visit_print:
+        movq %rsi, %rdi
+        push $696969
+        push $696969
+        call retrieve_print
+        pop %rdi # Expr id
+        pop %rsi # expr descriptor
+
+        call visit_expression
+
+        call emit_pop
+        call emit_rdi
+
+        call emit_call
+
+        call emit_print
+
+        leave
+        ret
     visit_if:
         mov %rsi, %rdi
         push %rdi # Store the id of the if statement for use in the label
@@ -541,6 +571,7 @@ emit_var:
 
 // in rdi: The number to be displayed
 .type emit_number, @function
+.global emit_number
 emit_number:
         push %rbp
         mov %rsp, %rbp
@@ -590,6 +621,19 @@ emit_number:
         syscall
         leave
         ret
+
+.type emit_print_body, @function
+emit_print_body:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_print_body, %rsi
+        movq $582, %rdx
+        syscall
+        leave
+        ret
+
 
 .type emit_asm_prologue, @function
 emit_asm_prologue:
@@ -955,6 +999,7 @@ emit_comma:
         leave
         ret
 .type emit_colon, @function
+.global emit_colon
 emit_colon:
         push %rbp
         mov %rsp, %rbp 
@@ -1010,6 +1055,7 @@ emit_rparen:
         leave
         ret
 .type emit_newline, @function
+.global emit_newline
 emit_newline:
         push %rbp
         mov %rsp, %rbp 
@@ -1033,6 +1079,7 @@ emit_newline_tab:
         ret
 // in rdi: string descriptor
 .type emit_identifier, @function
+.global emit_identifier
 emit_identifier:
         push %rbp
         mov %rsp, %rbp
@@ -1051,6 +1098,18 @@ emit_identifier:
         movq $1, %rax
         movq $1, %rdi
         movq %rcx, %rdx
+        syscall
+        leave
+        ret
+
+.type emit_print, @function
+emit_print:
+        push %rbp
+        movq %rsp, %rbp
+        movq $1, %rax
+        movq $1, %rdi
+        leaq token_print, %rsi
+        movq $5, %rdx
         syscall
         leave
         ret

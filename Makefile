@@ -1,6 +1,6 @@
 
-main: main.o lexer.o config.o utils.o parser.o symbol.o emitter.o
-	ld -o main main.o lexer.o parser.o symbol.o emitter.o config.o utils.o
+main: main.o lexer.o config.o utils.o parser.o symbol.o emitter.o astprint.o
+	ld -o main main.o lexer.o parser.o symbol.o emitter.o config.o utils.o astprint.o
 
 main.o: main.s
 	as -gstabs main.s -o main.o
@@ -20,13 +20,16 @@ symbol.o: symbol.s
 emitter.o: emitter.s
 	as -gstabs emitter.s -o emitter.o
 
+astprint.o: astprint.s
+	as -gstabs astprint.s -o astprint.o
+
 utils.o: utils.s
 	as -gstabs utils.s -o utils.o
 
 phony: clean run crun
 
 clean:
-	rm *.o main
+	rm *.o main code.s code
 
 run:	
 	make -s && echo "\nDone Compiling the code!\nRunning the code:\n" && ./main

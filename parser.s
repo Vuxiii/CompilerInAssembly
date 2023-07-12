@@ -27,6 +27,8 @@ _peek_data_:                    .int 0
 
 
 
+.global print_statement_buffer
+        print_statement_buffer: .space 256
 .global struct_instance_buffer
         struct_instance_buffer: .space 256
 .global struct_type_buffer
@@ -56,6 +58,7 @@ while_offset:                   .int 0
 struct_offset:                  .int 0
 struct_type_offset:             .int 0
 struct_instance_offset:         .int 0
+print_statement_offset:         .int 0
 .global function_offset
         function_offset:        .int 0
 
@@ -97,9 +100,39 @@ parse_statement:
         je while_statement
         cmp $21, %rax
         je struct_statement
+        cmp $11, %rax
+        je print_statement
 
         jmp node_is_not_statement
 
+
+    print_statement:
+        # Move the 'print' token to current
+        call next_token
+        call peek_token_id
+        cmp $5, %rax 
+        jne node_is_not_statement # Error in parsing '(' not found
+
+        # Move the '(' token to current
+        call next_token
+        call parse_expression
+        push %rax # Store expression ID
+        push %rbx # Store expression descriptor
+
+        call peek_token_id
+        cmp $6, %rax
+        jne node_is_not_statement # Error in parsing ')' not found
+        # Move the ')' token to current
+        call next_token
+
+        # Construct the print statement
+
+        pop %rsi
+        pop %rdi
+        call construct_print_node
+        push $39
+        push %rax
+        jmp check_statement_list
     struct_statement:
             # We need to determine if this is a struct declaration or an assignment
             # We do this by checking for the number og identifiers token
@@ -821,6 +854,37 @@ construct_struct_instance:
         ret
 
 
+// in rdi: expr id
+// in rsi: expr descriptor
+// out:    print descriptor
+.type construct_print_node, @function
+construct_print_node:
+        push %rbp
+        mov %rsp, %rbp
+        xor %rbx, %rbx
+        xor %rax, %rax
+        # Compute correct offst into buffer
+        mov print_statement_offset(%rip), %eax
+        push %rax # Store so we can return the descriptor
+        movq $8, %rdx # Size of print node (8 bytes)
+        mulq %rdx
+        mov %rax, %rbx
+        # We now have the correct offset into the buffer
+        # Load buffer
+        lea print_statement_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+
+        pop %rax # Restore descriptor
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (print_statement_offset)(%rip)
+
+        leave
+        ret
+
+
 // in rdi: struct name identifier
 // in rsi: int * to the field-descriptors
 // in rdx: field count
@@ -1049,7 +1113,29 @@ retrieve_statement_list:
         leave
         ret
 
+// in rdi: Token descriptor
+// out 16(%rbp): expr id
+// out 24(%rbp): expr descriptor
+.type retrieve_print, @function
+.global retrieve_print
+retrieve_print:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
 
+        lea print_statement_buffer(%rip), %rax
+        
+        mov   (%rax, %rbx), %edi # expr id
+        mov  4(%rax, %rbx), %esi # expr desc
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+
+        leave
+        ret
 
 // in rdi: Token descriptor
 // out 16(%rbp): lhs id

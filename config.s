@@ -16,8 +16,9 @@
 .global in
         // in:         .asciz "William EOP"
         // in:         .asciz "def main() { if ( 1000+2 < 3 ) { var1 = 3 } if (3+3 == 2) { vmaar2 = 3 var3 = 69 } var4 = 234 + 4244 } EOP"
-        // in:.asciz "def main() {  struct point { x, y } struct point p1      p1.x = 10 } EOP"
-        in:.asciz "def main() { struct point {x, y, z} struct point p1  struct point p2 p1.x = 1 p1.y = 2 p1.z = 3 p2.x = p1.x + 1 p2.y = p1.y + 1 p2.z = p1.z + 1 } EOP"
+        in:.asciz "def main() { if ( 1 == 1) {a = 3 + 8 * 2 print(a+2)}} EOP"
+        // in:.asciz "def run() { a = 42 print(a) } def main() { struct point {x, y, z} struct point p p.x = 69 p.y = 42 p.z = 0 print(0 + p.x) print(0 + p.y) print(p.z+3) run() } EOP"
+        // in:.asciz "def main() { struct point {x, y, z} struct point p1  struct point p2 p1.x = 1 p1.y = 2 p1.z = 3 p2.x = p1.x + 1 p2.y = p1.y + 1 p2.z = p1.z + 1 } EOP"
         // in:.asciz "def main() { struct point {x, y} struct point p1 struct point p2 p1.x = p2.x + p1.x } EOP"
         // in:         .asciz "def main() { a = 300 + 6 } EOP"
         // in:         .asciz "a = 4 + 6 b = 42 + 69 EOP"
@@ -104,6 +105,8 @@
 
 .global _emit_asm_epilogue
         _emit_asm_epilogue:       .asciz "\n\tleave\n\tmovq $60, %rax\n\tmovq $0, %rdi\n\tsyscall\n"
+.global _emit_print_body
+        _emit_print_body:         .asciz "\t\tmovq %rdi, %rax\n\t\txor %rcx, %rcx\n\t\tmovq $10, %rbx\n\tbegin_count:\n\t\tcqto\n\t\tidivq %rbx\n\t\tinc %rcx\n\t\ttest %rax, %rax\n\t\tjnz begin_count\n\t\tsubq %rcx, %rsp\n\t\tmovq %rcx, %rax\n\t\tcqto\n\t\tmovq $4, %rbx\n\t\tidivq %rbx \n\t\tsubq %rdx, %rbx\n\t\tsubq %rbx, %rsp\n\t\tmovq $10, %rbx\n\t\tmovq %rcx, %r8\n\t\tmovq %rdi, %rax\n\tbegin_push:\n\t\tcqto\n\t\tidivq %rbx\n\t\taddb $48, %dl\n\t\tdec %r8\n\t\tmovb %dl, (%rsp, %r8, 1)\n\t\ttest %r8, %r8\n\t\tjnz begin_push\n\n\t\tmovq $1, %rax\n\t\tmovq $1, %rdi\n\t\tleaq (%rsp), %rsi\n\t\tmovq %rcx, %rdx\n\t\tsyscall\n\t\tpush $10\n\t\tmovq $1, %rax\n\t\tmovq $1, %rdi\n\t\tleaq (%rsp), %rsi\n\t\tmovq $1, %rdx\n\t\tsyscall"
 
 # --[ Opcodes ]--
 .global _emit_push
@@ -185,3 +188,48 @@
 
 .global _emit_guard
         _emit_guard: .asciz "guard"
+
+# -- [[ astprint Stuff ]] --
+
+.global _astprint_tab
+        _astprint_tab: .asciz "\t"
+
+.global _astprint_lhs
+        _astprint_lhs: .asciz "lhs "
+
+.global _astprint_rhs
+        _astprint_rhs: .asciz "rhs "
+
+.global _astprint_guard
+        _astprint_guard: .asciz "guard "
+
+
+.global _astprint_body
+        _astprint_body: .asciz "body "
+
+.global _astprint_id
+        _astprint_id: .asciz "id: "
+
+.global _astprint_desc
+        _astprint_desc: .asciz "desc: "
+
+.global _astprint_arrow
+        _astprint_arrow: .asciz " -> "
+
+.global _astprint_number
+        _astprint_number: .asciz "Number: "
+.global _astprint_identifier
+        _astprint_identifier: .asciz "Identifier: "
+
+.global _astprint_binaryop
+        _astprint_binaryop: .asciz "BinaryOP:"
+
+.global _astprint_operator
+        _astprint_operator: .asciz "operator: "
+
+.global _astprint_function
+        _astprint_function: .asciz "function: "
+
+.global _astprint_assignment
+        _astprint_assignment: .asciz "Assignment:"
+

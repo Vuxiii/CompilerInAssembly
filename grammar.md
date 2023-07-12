@@ -30,6 +30,7 @@ statement  : struct_assign
            | '{' statement_list '}'
            | 'while' '(' expression ')' statement
            | 'if' '(' expression ')' statement
+           | 'print' '(' expression ')'
 
 expression : 'identifier' '(' ')'
            | 'identifier' '(' arg_list ')'
@@ -140,24 +141,32 @@ field_access: size = 8
 struct_instance: size = 8
     type: 38
     struct name: descriptor
-    var name: descriptor
+    var name:    descriptor
 
-struct_type_list_buffer: size = 8
+print_statement: size = 8
+    type: 39
+    expr->type:  token_id
+    expr:        descriptor
+
+print_statement_buffer: size = 8
+    [(expr_type, expr_descriptor),...]
+
+struct_type_buffer: size = 8
     [(name_descriptor, struct_descriptor),...]
 
-field_acces_list_buffer: size = 8
+field_acces_buffer: size = 8
     [(structname_Descriptor, field_descriptor),...]
 
-struct_list_buffer: size = 8 + 4 * count
+struct_buffer: size = 8 + 4 * count
     [(name_descriptor, count_int, field_descriptor[] ),...]
 
-while_list_buffer: size = 16
+while_buffer: size = 16
     [(guard_id, guard_descriptor, body_id, body_descriptor),...]
 
-if_list_buffer: size = 16
+if_buffer: size = 16
     [(guard_id, guard_descriptor, body_id, body_descriptor),...]
 
-function_list_buffer: size = 20
+function_buffer: size = 20
     [(identifier, body_id, body_descriptor, var_count, symbol_table),...]
 
 statement_list_buffer: size = 16

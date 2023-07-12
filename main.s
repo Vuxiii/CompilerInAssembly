@@ -45,6 +45,11 @@ _start:
     movq %rbx, %rsi
     push %rdi
     push %rsi
+    // call astprint
+    pop %rsi
+    pop %rdi
+    push %rdi
+    push %rsi
     call collect
     pop %rsi
     pop %rdi
