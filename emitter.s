@@ -313,99 +313,117 @@ visit_statement:
         movq %rsi, %rdi
         call retrieve_assignment
 
-        # Determine if we need to evaluate the leftside first.
-        # This must be done for @runtime indexing into arrays:  a[i++] = i
-        movq (%rsp), %rdi
-        cmp $41, %rdi # Array_Access
-        je visit_assignment_check_for_compiletime_eval
-    visit_assignment_compiletime:
-        movq 16(%rsp), %rdi # expr id
-        movq 24(%rsp), %rsi # expr descriptor
-    
-        call visit_expression
+        # Evaluate the destination first.
+        # Needs to be done for array access.
+        # a[expr]
 
-        call emit_newline_tab
+        movq (%rsp), %rdi
+        cmp $41, %rdi # Array Access
+        je visit_assignment_array_access
+        
+        # Eval the right side
+        movq 16(%rsp), %rdi
+        movq 24(%rsp), %rsi
+        call visit_expression
 
         call emit_pop
         call emit_rax
-
         call emit_mov
         call emit_rax
         call emit_comma
 
-        movq  (%rsp), %rsi # id
-        movq 8(%rsp), %rdi # descriptor
+        pop %rsi
+        pop %rdi
         call emit_var
+
+        call emit_newline
+
         leave
         ret
-    visit_assignment_check_for_compiletime_eval:
-        movq 8(%rsp), %rdi # lhs descriptor
-        push $69 # index descriptor
-        push $69 # index id
+
+    visit_assignment_array_access:
+    # Unwrap the expression for the index
+        movq 8(%rsp), %rdi
+        push $696969 # index descriptor
+        push $696969 # index id
+        push $696969 # identifier descriptor
+        push $696969 # identifier id
+        call retrieve_array_access
+
+        movq  (%rsp), %rsi
+        movq 8(%rsp), %rdi
+        call get_offset_on_stack
+        movq $8, %rdx
+        imulq %rdx
+        # base offset
+        push %rax
+        
+        movq 16(%rsp), %rdi
+        call find_array_assignment_by_identifier
+        movq %rax, %rdi
+        push $69 # stride
+        push $69 # count
         push $69 # identifier descriptor
         push $69 # identifier id
-        call retrieve_array_access
-        movq 16(%rsp), %rax
-        cmp $25, %rax
-        jne visit_assignment_runtime
+        call retrieve_array_assignment
+        addq $24, %rsp
         
-        // movq 16(%rsp), %rax
-        // movq 24(%rsp), %rbx
-        addq $32, %rsp
-        // movq %rax,  (%rsp)
-        // movq %rbx, 8(%rsp)
-        
-        movq 16(%rsp), %rdi # expr id
-        movq 24(%rsp), %rsi # expr descriptor
-    
+        # Eval index
+        movq 32(%rsp), %rdi
+        movq 40(%rsp), %rsi
+    breakhere:
+        pop %rax # stride
+        pop %rbx # offset
+        addq $32, %rsp # Remove the array access stuff
+        push %rbx # offset
+        push %rax # stride
         call visit_expression
-
-        call emit_newline_tab
-
+        
         call emit_pop
         call emit_rax
-
         call emit_mov
-        call emit_rax
+        call emit_dollar
+        pop %rdi # Stride
+        call emit_number
         call emit_comma
+        call emit_rdx
+        call emit_mul
+        call emit_rdx
+        call emit_push
+        call emit_rax
 
-        movq  (%rsp), %rsi # id
-        movq 8(%rsp), %rdi # descriptor
-        call emit_var_with_direct_offset
-        leave
-        ret
-    visit_assignment_runtime:
-        # Calculate the relative offset from index
-        addq $16, %rsp
-        
-        call emit_newline_tab
-        
-        pop %rdi
-        pop %rsi
-        
+        call emit_newline
+
+        # We now have the dest on the stack.
+
+        # Evaluate the rhs
+        movq 24(%rsp), %rdi
+        movq 32(%rsp), %rsi
         call visit_expression
-        # The offset is now on the stack.
+
+        # We have the result on the stack
+        # Destination is just below
+        # -baseoffset(%rbp, %rcx)
+        
+    # Result
+        call emit_pop
+        call emit_rax
+    # Relative offset
         call emit_pop
         call emit_rcx
-
-        call emit_newline_tab
-
-        movq 16(%rsp), %rdi # expr id
-        movq 24(%rsp), %rsi # expr descriptor
-        
-        call visit_expression
-
-
-        call emit_pop
-        call emit_rax
-
+        call emit_neg
+        call emit_rcx
         call emit_mov
         call emit_rax
         call emit_comma
-
-        movq  (%rsp), %rsi # id
-        movq 8(%rsp), %rdi # descriptor
-        call emit_var_with_relative_offset
+        call emit_minus
+        pop %rdi # Base Offset
+        call emit_number
+        call emit_lparen
+        call emit_rbp
+        call emit_comma
+        call emit_rcx
+        call emit_rparen
 
         leave
         ret
@@ -434,15 +452,12 @@ visit_expression:
         push %rsi
         
         call emit_newline_tab
-        call emit_mov
+        
 
         pop %rdi
         call emit_load_array_access
 
-        call emit_comma
-        call emit_rax
-        call emit_push
-        call emit_rax
+        
 
         leave
         ret
@@ -660,7 +675,48 @@ emit_load_array_access:
         cmp $25, %rdi
         je emit_load_array_access_compiletime
     emit_load_array_access_runtime:
-
+    # Case [1]
+        # 1. Load the base address
+        # 2. evaluate the expr
+        # 3. load the expr into rcx
+        # 4. Emit the relative offset
+        #     -baseoffset(%rbp, %rcx, 8)
+        # 5. Push to stack
+    # 1
+        pop %rsi
+        pop %rdi
+        call get_offset_on_stack
+        cltq
+        movq $8, %rdx
+        imulq %rdx
+        push %rax # Base offset
+    # 2
+        movq  8(%rsp), %rdi
+        movq 16(%rsp), %rsi
+        call visit_expression
+    # 3
+        call emit_pop
+        call emit_rcx
+        call emit_neg
+        call emit_rcx
+    # 4
+        call emit_mov
+        call emit_minus
+        pop %rdi
+        call emit_number
+        call emit_lparen
+        call emit_rbp
+        call emit_comma
+        call emit_rcx
+        call emit_comma
+        movq $8, %rdi # Replace with stride
+        call emit_number
+        call emit_rparen
+    # 5
+        call emit_comma
+        call emit_rax
+        call emit_push
+        call emit_rax
         leave
         ret
     emit_load_array_access_compiletime:
@@ -668,6 +724,7 @@ emit_load_array_access:
         # 1. load the base address
         # 2. add the offset for the index
         # 3. profit
+        # 4. Push to stack
 
     # 1
         pop %rsi
@@ -688,111 +745,19 @@ emit_load_array_access:
         addq %rax, %rbx
         push %rbx # Final offset
     # 3
-
+        call emit_mov
         call emit_minus
         pop %rdi
         call emit_number
         call emit_lparen
         call emit_rbp
         call emit_rparen
-
-        leave
-        ret
-
-// in rdi: the descriptor of the identifier
-// in rsi: the token type
-//  This method uses rcx as the relative offsete
-//  Stride is 8
-.type emit_var_with_relative_offset, @function
-emit_var_with_relative_offset:
-        push %rbp
-        movq %rsp, %rbp
-
-        push $69 # index descriptor
-        push $69 # index id
-        push $69 # identifier descriptor
-        push $69 # identifier id
-        call retrieve_array_access
-        movq  (%rsp), %rsi
-        movq 8(%rsp), %rdi
-        call get_offset_on_stack
-        
-        movq $8, %rdx
-        imulq %rdx
-        push %rax # Base offset
-        
-        movq 24(%rsp), %rsi # index desc
-        movq 32(%rsp), %rdi # index id
-        
-        call emit_minus
-        movq (%rsp), %rdi
-        call emit_number
-        call emit_lparen
-        call emit_rbp
+    # 3
         call emit_comma
-        call emit_rcx
-        call emit_comma
-        movq $8, %rdi
-        call emit_number
-        call emit_rparen
-        # -base_offset(%rbp, expr, 8)
+        call emit_rax
+        call emit_push
+        call emit_rax
 
-
-        leave
-        ret
-
-// in rdi: the descriptor of the identifier
-// in rsi: the type of the field/identifier
-.type emit_var_with_direct_offset, @function
-emit_var_with_direct_offset:
-        push %rbp
-        mov %rsp, %rbp
-
-        push $69 # index descriptor
-        push $69 # index id
-        push $69 # identifier descriptor
-        push $69 # identifier id
-        call retrieve_array_access
-        movq  (%rsp), %rsi
-        movq 8(%rsp), %rdi
-        call get_offset_on_stack
-        
-        movq $8, %rdx
-        imulq %rdx
-        push %rax # Base offset
-        
-        movq 24(%rsp), %rsi # index desc
-        movq 32(%rsp), %rdi # index id
-
-        call retrieve_number
-        push %rax # index
-
-        movq 8(%rsp), %rdi
-        call find_array_assignment_by_identifier
-        
-        movq %rax, %rdi
-        push $69 # stride
-        push $69 # count
-        push $69 # identifier descriptor
-        push $69 # identifier id
-        call retrieve_array_assignment
-
-        movq 24(%rsp), %rbx # stride
-        movq 32(%rsp), %rax # index
-        imulq %rbx
-        movq 40(%rsp), %rdi # base offset
-        addq %rax, %rdi
-
-        push %rdi
-        call emit_minus
-        pop %rdi
-        call emit_number
-
-        call emit_lparen
-        call emit_rbp
-        call emit_rparen
-        leave
-        ret
         leave
         ret
 
@@ -1145,6 +1110,17 @@ emit_cmp:
         movq $1, %rax
         movq $1, %rdi
         leaq _emit_cmp, %rsi
+        movq $6, %rdx
+        syscall
+        leave
+        ret
+.type emit_neg, @function
+emit_neg:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_neg, %rsi
         movq $6, %rdx
         syscall
         leave

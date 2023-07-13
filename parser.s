@@ -434,6 +434,7 @@ parse_statement:
         # TODO! Add error handling here.
         # For now, just assume it is a number
         call parse_expression
+        push %rax
         push %rbx
 
         call next_token
@@ -445,10 +446,10 @@ parse_statement:
         cmp $4, %rax
         je assignment_array_identifier_access
 
-        pop %rdx # count
-        pop %rsi # descriptor
-        pop %rdi # Token id
-        movq $8, %rcx # For now, ints are 8 bytes
+        movq   (%rsp), %rdx # count
+        movq 16(%rsp), %rsi # Token descriptor
+        movq 24(%rsp), %rdi # Token id
+        movq $8, %rcx       # Stride, ints are 8 bytes
         call construct_array_assignment
         push $40
         push %rax

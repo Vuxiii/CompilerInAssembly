@@ -17,7 +17,7 @@
         // in:         .asciz "William EOP"
         // in:         .asciz "def main() { if ( 1000+2 < 3 ) { var1 = 3 } if (3+3 == 2) { vmaar2 = 3 var3 = 69 } var4 = 234 + 4244 } EOP"
         // in:.asciz "def main() { a[10] i = 1 a[i] = i print(a[i]) print(a[0])} EOP"
-        in:.asciz "def main() { a[10] b = a[0]  } EOP"
+        in:.asciz "def main() { i = 0 a[10] while ( i < 10 ) { a[i] = i print(a[i]) i = i + 1 } } EOP"
         // in:.asciz "def run() { a = 42 print(a) } def main() { struct point {x, y, z} struct point p p.x = 69 p.y = 42 p.z = 0 print(0 + p.x) print(0 + p.y) print(p.z+3) run() } EOP"
         // in:.asciz "def main() { struct point {x, y, z} struct point p1  struct point p2 p1.x = 1 p1.y = 2 p1.z = 3 p2.x = p1.x + 1 p2.y = p1.y + 1 p2.z = p1.z + 1 } EOP"
         // in:.asciz "def main() { struct point {x, y} struct point p1 struct point p2 p1.x = p2.x + p1.x } EOP"
@@ -148,6 +148,8 @@
         _emit_jge: .asciz "\n\tjge "
 .global _emit_cmp
         _emit_cmp: .asciz "\n\tcmp "
+.global _emit_neg
+        _emit_neg: .asciz "\n\tneg "
 
 # --[ Operands ]--
 .global _emit_rax
