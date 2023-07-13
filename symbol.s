@@ -140,7 +140,7 @@ symbol_array_assignment:
         push $696969 # identifier id
         call retrieve_array_assignment
 
-        movq (%rsp), %rdi
+        movq 8(%rsp), %rdi
         call set_offset_on_stack
 
         movq 16(%rsp), %rdi
@@ -285,7 +285,8 @@ symbol_assignment:
         ret
     symbol_assignment_array_access:
         pop %rdi
-        push $696969 # ignore index
+        push $696969 # index descriptor
+        push $696969 # index id
         push $696969 # descriptor
         push $696969 # id
         call retrieve_array_access

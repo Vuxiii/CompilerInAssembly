@@ -425,20 +425,20 @@ parse_statement:
         ret
     assignment_array_identifier:
         # Store identifier
+        call current_token_id
+        push %rax
         call current_token_data
         push %rax
         call next_token
-        # Current: '['
-        # Peek MUST be a number.
+        # current: '['
         # TODO! Add error handling here.
         # For now, just assume it is a number
+        call parse_expression
+        // push %rax
+        push %rbx
 
-        call peek_token_data
-        push %rax
-
-        # Eat the number and the ']'
         call next_token
-        call next_token
+        # current: ']'
 
         # At this point, it can either be an array initialization or an array access. We check this by peeking for '='
 
@@ -456,9 +456,10 @@ parse_statement:
         jmp check_statement_list
     assignment_array_identifier_access:
         
-        movq $24, %rdi
-        pop %rdx # identifier descriptor
-        pop %rsi # index
+        pop %rcx # index descriptor
+        pop %rdx # index type
+        pop %rsi # identifier descriptor
+        pop %rdi # identifier id
         call construct_array_access
         push $41
         push %rax
@@ -643,11 +644,13 @@ parse_expression:
 
     .type parse_token, @function
     parse_token:
-            # We can have:
-            # [1]: '(' expr ')'
-            # [2]: 'number'
-            # [3]: 'identifier'
-            # [4]: 'identifier' '.' 'identifier'
+    # We can have:
+    # [1]: '(' expr ')'
+    # [2]: 'number'
+    # [3]: 'identifier'
+    # [4]: 'identifier' '[' expr ']'
+    # [5]: 'identifier' '.' 'identifier'
+    # [6]: 'identifier' '.' 'identifier' '[' expr ']'
             push %rbp
             mov %rsp, %rbp
             call peek_token_id
@@ -680,16 +683,43 @@ parse_expression:
             call next_token
             
             call peek_token_id
-            cmp $37, %rax
+            cmp $37, %rax # dot '.'
             je parse_token_return_field_access
-            
+            cmp $9, %rax # bracket '['
+            je parse_token_return_identifier_array_access
+
             call current_token_data
             movq %rax, %rbx
             call current_token_id
             leave
             ret
-        parse_token_return_field_access:
+        parse_token_return_identifier_array_access:
         # Case [4]
+            call current_token_data
+            push %rax
+            call current_token_id
+            push %rax
+
+            call next_token
+            # current: '['
+
+            call parse_expression
+            push %rax
+            push %rbx
+
+            call next_token
+            # current: ']'
+            pop %rcx
+            pop %rdx
+            pop %rdi
+            pop %rsi
+            call construct_array_access
+            movq %rax, %rbx
+            movq $41, %rax
+            leave
+            ret
+        parse_token_return_field_access:
+        # Case [5]
             call current_token_data
             push %rax
             call next_token # eat '.'
@@ -785,7 +815,7 @@ construct_array_assignment:
         mov array_assignment_offset(%rip), %eax
         push %rax # Store so we can return the descriptor
         push %rdx # mulq uses rdx...
-        movq $16, %rdx # Size of statementlist (16 bytes)
+        movq $16, %rdx
         mulq %rdx
         mov %rax, %rbx
         pop %rdx
@@ -808,7 +838,8 @@ construct_array_assignment:
 
 // in rdi: identifier type
 // in rsi: identifier descriptor
-// in rdx: index
+// in rdx: index type
+// in rcx: index descriptor
 // out:    token descriptor
 .type construct_array_access, @function
 construct_array_access:
@@ -818,9 +849,8 @@ construct_array_access:
         xor %rax, %rax
         mov array_access_offset(%rip), %eax
         push %rax # Store so we can return the descriptor
-        # Ensure that we are offset by the correct size of each struct -> ebx * sizeof(binaryop) -> ebx * 20 bytes
         push %rdx # mulq uses rdx...
-        movq $12, %rdx
+        movq $16, %rdx
         mulq %rdx
         mov %rax, %rbx
         pop %rdx
@@ -830,6 +860,7 @@ construct_array_access:
         mov %edi,   (%rax, %rbx)
         mov %esi,  4(%rax, %rbx)
         mov %edx,  8(%rax, %rbx)
+        mov %ecx, 12(%rax, %rbx)
         
         pop %rax # Restore descriptor
         movq %rax, %rbx
@@ -1235,25 +1266,28 @@ retrieve_array_assignment:
 // in rdi: token descriptor
 // out 16(%rbp): identifier id
 // out 24(%rbp): identifier descriptor
-// out 32(%rbp): index
+// out 32(%rbp): index id
+// out 40(%rbp): index descriptor
 .type retrieve_array_access, @function
 .global retrieve_array_access
 retrieve_array_access:
         push %rbp
         mov %rsp, %rbp 
         mov %rdi, %rax
-        movq $12, %rdx
+        movq $16, %rdx
         mulq %rdx
         mov %rax, %rbx
 
         lea array_access_buffer(%rip), %rax
         mov   (%rax, %rbx), %edi # identifier id
         mov  4(%rax, %rbx), %esi # identifier desc
-        mov  8(%rax, %rbx), %edx # index
+        mov  8(%rax, %rbx), %edx # index id
+        mov 12(%rax, %rbx), %ecx # index descriptor
 
         mov %edi, 16(%rbp)
         mov %esi, 24(%rbp)
         mov %edx, 32(%rbp)
+        mov %ecx, 40(%rbp)
 
         leave
         ret

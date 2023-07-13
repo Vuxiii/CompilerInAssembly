@@ -267,9 +267,10 @@ astprint_expr:
         push %rsi
         call emit_array_access_
         pop %rdi
-        push $696969 # index
-        push $696969 # descriptor
-        push $696969 # id
+        push $696969 # index descriptor
+        push $696969 # index id
+        push $696969 # identifier id
+        push $696969 # identifier descriptor
         call retrieve_array_access
         
         call emit_arrow
@@ -277,15 +278,15 @@ astprint_expr:
 
         # Check for field or identifier here. (%rsp)
 
-        movq 8(%rsp), %rdi
-        call emit_identifier
+        // movq 8(%rsp), %rdi
+        // call emit_identifier
 
-        call emit_arrow
+        // call emit_arrow
 
-        movq 16(%rsp), %rdi
-        call retrieve_number
-        movq %rax, %rdi
-        call emit_number
+        // movq 16(%rsp), %rdi
+        // call retrieve_number
+        // movq %rax, %rdi
+        // call emit_number
 
 
         leave
