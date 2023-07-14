@@ -371,7 +371,6 @@ visit_statement:
         # Eval index
         movq 32(%rsp), %rdi
         movq 40(%rsp), %rsi
-    breakhere:
         pop %rax # stride
         pop %rbx # offset
         addq $32, %rsp # Remove the array access stuff
@@ -452,12 +451,9 @@ visit_expression:
         push %rsi
         
         call emit_newline_tab
-        
 
         pop %rdi
         call emit_load_array_access
-
-        
 
         leave
         ret
@@ -752,7 +748,7 @@ emit_load_array_access:
         call emit_lparen
         call emit_rbp
         call emit_rparen
-    # 3
+    # 4
         call emit_comma
         call emit_rax
         call emit_push
@@ -781,6 +777,7 @@ emit_var:
         call emit_lparen
         call emit_rbp
         call emit_rparen
+        
         leave
         ret
         

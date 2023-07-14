@@ -139,14 +139,47 @@ symbol_array_assignment:
         push $696969 # identifier descriptor
         push $696969 # identifier id
         call retrieve_array_assignment
-
-        movq 8(%rsp), %rdi
+        # Check if it is an identifier or a struct
+        
+        pop %rdi # id type
+        cmp $38, %rdi
+        je symbol_array_assignment_struct
+        pop %rdi # descriptor
         call set_offset_on_stack
+        call decrease_symbol_count
 
-        movq 16(%rsp), %rdi
+        pop %rdi # Count
         call retrieve_number
         movq %rax, %rdi
-        dec %rdi
+        call increase_symbol_count_by
+        leave
+        ret
+    symbol_array_assignment_struct:
+        pop %rdi # descriptor
+        push $696969 # variable name descriptor
+        push $696969 # struct descriptor
+        call retrieve_struct_instance
+        movq 8(%rsp), %rdi # Variable name descriptor
+        call set_offset_on_stack
+        call decrease_symbol_count
+
+        pop %rdi # struct descriptor.
+        addq $8, %rsp
+        push $696969 # field descriptor
+        push $696969 # count
+        push $696969 # name
+        call retrieve_struct_decl
+        addq $8, %rsp
+        pop %rdx # Count
+
+        addq $8, %rsp
+        movq (%rsp), %rdi # len
+        push %rdx
+        call retrieve_number
+        pop %rdx
+        imulq %rdx
+        
+        movq %rax, %rdi
         call increase_symbol_count_by
 
         leave
@@ -551,6 +584,18 @@ increase_symbol_count:
         push %rax
         movl _current_symbol_count_(%rip), %eax
         inc %eax
+        movl %eax, _current_symbol_count_(%rip)
+        pop %rax
+        leave
+        ret
+
+.type decrease_symbol_count, @function
+decrease_symbol_count:
+        push %rbp
+        mov %rsp, %rbp
+        push %rax
+        movl _current_symbol_count_(%rip), %eax
+        dec %eax
         movl %eax, _current_symbol_count_(%rip)
         pop %rax
         leave

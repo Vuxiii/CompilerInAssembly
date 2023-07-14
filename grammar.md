@@ -20,6 +20,7 @@ struct_decl : 'struct' 'identifier' '{' param_list '}'
 
 struct_assign : 'struct' 'identifier' 'identifier' '=' '{' arg_list '}'
 var_assign    : 'identifier' '=' expression
+              | 'identifier' '[' 'number' ']' '=' expression
 
 array_assign  : 'struct' 'identifier' 'identifier' '=' '[' 'number' ']'
               | 'identifier' '=' '[' 'number' ']'
