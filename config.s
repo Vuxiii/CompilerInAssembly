@@ -2,6 +2,11 @@
 # In here we define the different tokens.
 .data
 
+.global filename
+        filename: .asciz "./in.a"
+.global filesize
+        filesize: .int 4096
+
 .global number_tokens
         number_tokens:     .space 256 # These number tokens can be indexed into. Each number spans 4 bytes (32 bit)
                            .type number_token, @object
@@ -15,19 +20,7 @@
 
 .global input_buffer
         input_buffer: .space 30
-.global in
-        // in:         .asciz "William EOP"
-        // in:         .asciz "def main() { if ( 1000+2 < 3 ) { var1 = 3 } if (3+3 == 2) { vmaar2 = 3 var3 = 69 } var4 = 234 + 4244 } EOP"
-        // in:.asciz "def main() { a[10] i = 1 a[i] = i print(a[i]) print(a[0])} EOP"
-        in:.asciz "def main() { print(11111) xs[3] i = 0 while ( i < 3 ) { xs[i] = i print(xs[i]) i = i + 1 } print(11111) i = 0 ys[3] while ( i < 3 ) { ys[2-i] = xs[i] i = i + 1} print(11111) i = 0 while ( i < 3 ) {print(xs[i]) print(ys[i]) i = i + 1}  } EOP"
-        // in:.asciz "def run() { a = 42 print(a) } def main() { struct point {x, y, z} struct point p p.x = 69 p.y = 42 p.z = 0 print(0 + p.x) print(0 + p.y) print(p.z+3) run() } EOP"
-        // in:.asciz "def main() { struct point {x, y, z} struct point p1  struct point p2 p1.x = 1 p1.y = 2 p1.z = 3 p2.x = p1.x + 1 p2.y = p1.y + 1 p2.z = p1.z + 1 } EOP"
-        // in:.asciz "def main() { struct point {x, y} struct point p1 struct point p2 p1.x = p2.x + p1.x } EOP"
-        // in:         .asciz "def main() { a = 300 + 6 } EOP"
-        // in:         .asciz "a = 4 + 6 b = 42 + 69 EOP"
-        // in:         .asciz "= def == ( ) if { } [] print while +- /    * < > && let || willi EOP"
-        // in:         .asciz "def if = == ( ) { } [] print while +- /    * < > && let || 12 ass EOP"
-// struct point p1
+
 .global newline
         newline:          .asciz "\n"
 .global token_eop

@@ -1,3 +1,11 @@
+def main() { 
+    print(69) 
+} 
+
+
+
+EOP
+
 def main() {
     struct point { x, y }
     struct point p1

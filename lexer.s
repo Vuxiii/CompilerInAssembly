@@ -16,14 +16,42 @@
 .extern number     # 12
 .extern identifier # 13
 
-
+.extern MAP_PRIVATE
 .extern number_0
 .extern number_9
 
+.extern filename
+.extern filesize
 .extern buffer_address
-
-
 .section .text
+
+
+
+// in rdi: file name to read
+// This function fills the buffer address
+.global read_file_contents
+read_file_contents:
+        push %rbp
+        movq %rsp, %rbp
+        # Open the file
+        movq $2, %rax
+        movq $filename, %rdi
+        movq $0, %rsi
+        xorq %rdx, %rdx
+        syscall
+        movq %rax, %r8       # Move the fd
+        
+        movq $9, %rax        # mmap
+        movq $0, %rdi        # addr   -> null kernel chooses
+        movq $filesize, %rsi # len    -> length to map in bytes
+        movq $1, %rdx        # prot
+        movq $2, %r10        # flags
+        xorq %r9, %r9        # offset -> 0
+        syscall
+
+        movq %rax, (buffer_address)(%rip)
+        leave
+        ret
 
 // out rax: identifier token id
 // out rbx: identifier descriptor
@@ -32,14 +60,14 @@
 get_token:
     push %rbp
     mov %rsp, %rbp 
-    movq buffer_address(%rip), %rdi # Load the correct palce in the buffer
+    movq buffer_address(%rip), %rdi # Load the correct place in the buffer
     # rdi -> Current offst into the input stream                        | Start
     xor %rcx, %rcx  # What is out current offset for finding the space  | End = Start + rcx
     xor %rax, %rax  # Clear out the rax register
 token_remove_white_space:
     movb (%rdi, %rcx), %al
     cmp $32, %al
-    jne token_loop
+    jg token_loop
     inc %rdi
     jmp token_remove_white_space
 token_loop:

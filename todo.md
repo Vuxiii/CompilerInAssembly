@@ -9,10 +9,11 @@
     b. String literals
     c. String printing
     d. Ensure that all the binary operators are implemented
+    e. Read from std in
 2. Lexer
     a. Add support for string literals Lexer
     b. Reading from std in
-    c. Handle newline characters
+3. Pointers & Addresses
 
 ## Nice to have
 
