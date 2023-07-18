@@ -671,7 +671,7 @@ emit_load_array_access:
         cmp $25, %rdi
         je emit_load_array_access_compiletime
     emit_load_array_access_runtime:
-    # Case [1]
+    # Case [2]
         # 1. Load the base address
         # 2. evaluate the expr
         # 3. load the expr into rcx
@@ -679,34 +679,65 @@ emit_load_array_access:
         #     -baseoffset(%rbp, %rcx, 8)
         # 5. Push to stack
     # 1
+        cmpq $24, (%rsp) # identifier
+        je emit_load_array_access_runtime_identifier
+        movq 8(%rsp), %rdi
+        push $696969 # Field descriptor
+        push $696969 # Var descriptor
+        call retrieve_field_access
+        pop %rdi
+        addq $8, %rsp
+        call find_array_assignment_by_identifier
+        movq %rax, %rdi
+        push $696969 # Stride
+        push $696969 # count
+        push $696969 # Identifier desc
+        push $696969 # Identifier id
+        call retrieve_array_assignment
+        breakhere:
+        pop %rax
+        pop %rax
+        pop %rax
+        pop %rax
+    emit_load_array_access_runtime_identifier:
         pop %rsi
         pop %rdi
+        push %rax # Stride
         call get_offset_on_stack
         cltq
         movq $8, %rdx
         imulq %rdx
         push %rax # Base offset
     # 2
-        movq  8(%rsp), %rdi
-        movq 16(%rsp), %rsi
+        movq 16(%rsp), %rdi
+        movq 24(%rsp), %rsi
         call visit_expression
     # 3
         call emit_pop
+        call emit_rax
+        call emit_mov
+        call emit_dollar
+        movq 8(%rsp), %rdi # Stride
+        call emit_number
+        call emit_comma
+        call emit_rdx
+        call emit_mul
+        call emit_rdx
+        call emit_mov
+        call emit_rax
+        call emit_comma
         call emit_rcx
         call emit_neg
         call emit_rcx
     # 4
         call emit_mov
         call emit_minus
-        pop %rdi
+        pop %rdi # Base offset
         call emit_number
         call emit_lparen
         call emit_rbp
         call emit_comma
         call emit_rcx
-        call emit_comma
-        movq $8, %rdi # Replace with stride
-        call emit_number
         call emit_rparen
     # 5
         call emit_comma

@@ -256,8 +256,12 @@ parse_statement:
             addq $8, %rsp
             movq $8, %rdx
             imulq %rdx
-            movq %rax, %rcx # stride
-            pop %rdx        # count
+            
+            pop %rdi        # Count descriptor
+            push %rax
+            call retrieve_number
+            movq %rax, %rdx # Count
+            pop %rcx        # stride
             pop %rsi        # descriptor
             pop %rdi        # type
             call construct_array_assignment
