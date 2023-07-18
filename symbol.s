@@ -171,13 +171,10 @@ symbol_array_assignment:
         call retrieve_struct_decl
         addq $8, %rsp
         pop %rdx # Count
-
+    breakhere1:
         addq $8, %rsp
-        movq (%rsp), %rdi # len
-        push %rdx
-        call retrieve_number
-        pop %rdx
-        imulq %rdx
+        movq (%rsp), %rax # stride
+        imulq %rdx        # Count
         
         movq %rax, %rdi
         call increase_symbol_count_by

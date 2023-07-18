@@ -1678,19 +1678,28 @@ retrieve_struct_type:
         leave
         ret
 
-// in rdi:  identifier descriptor
+// in rdi:  token descriptor
+// in rsi:  token id (24/36)
 // out rax: assignment descriptor
 .type find_array_assignment_by_identifier, @function
 .global find_array_assignment_by_identifier
 find_array_assignment_by_identifier:
         push %rbp
         movq %rsp, %rbp
+        cmp $24, %rsi
+        je array_assignment_token_is_identifier
+        push $696969 # field
+        push $696969 # var 
+        call retrieve_field_access
+        pop %rdi
+        addq $8, %rsp
+    array_assignment_token_is_identifier:
         call retrieve_identifier
         movq %rax, %rdi
 
-        mov assignment_offset(%rip), %r8d
+        mov array_assignment_offset(%rip), %r8d
         # Total num to check
-        lea assignment_buffer(%rip), %rsi
+        lea array_assignment_buffer(%rip), %rsi
         addq $8, %rsi # Place offset ontop of identifier descriptor
 
         xor %rcx, %rcx

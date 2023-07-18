@@ -357,8 +357,9 @@ visit_statement:
         imulq %rdx
         # base offset
         push %rax
-        
+
         movq 16(%rsp), %rdi
+        movq 8(%rsp), %rsi
         call find_array_assignment_by_identifier
         movq %rax, %rdi
         push $69 # stride
@@ -681,6 +682,7 @@ emit_load_array_access:
     # 1
         cmpq $24, (%rsp) # identifier
         je emit_load_array_access_runtime_identifier
+        movq $36, %rsi
         movq 8(%rsp), %rdi
         push $696969 # Field descriptor
         push $696969 # Var descriptor
