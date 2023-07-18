@@ -1073,7 +1073,7 @@ construct_statement_list:
 
 // in rdi: identifier type
 // in rsi: identifier descriptor
-// in rdx: count
+// in rdx: count SHOULD THIS BE INT ONLY
 // in rcx: stride
 // out:    token descriptor
 .type construct_array_assignment, @function
@@ -1508,7 +1508,7 @@ retrieve_statement_list:
 // in rdi: Token descriptor
 // out 16(%rbp): identifier id
 // out 24(%rbp): identifier descriptor
-// out 32(%rbp): count
+// out 32(%rbp): count SHOULD THIS BE INT ONLY
 // out 40(%rbp): stride
 .type retrieve_array_assignment, @function
 .global retrieve_array_assignment
@@ -1700,13 +1700,15 @@ find_array_assignment_by_identifier:
         mov array_assignment_offset(%rip), %r8d
         # Total num to check
         lea array_assignment_buffer(%rip), %rsi
-        addq $8, %rsi # Place offset ontop of identifier descriptor
+        addq $4, %rsi # Place offset ontop of identifier descriptor
 
         xor %rcx, %rcx
     check_next_array:
         push %rcx
         push %rsi
         push %rdi
+        mov -4(%rsi), %edi
+    brrrrr:
         mov (%rsi), %edi
         call retrieve_identifier
         movq %rax, %rsi

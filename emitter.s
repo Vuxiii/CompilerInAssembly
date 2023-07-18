@@ -680,15 +680,8 @@ emit_load_array_access:
         #     -baseoffset(%rbp, %rcx, 8)
         # 5. Push to stack
     # 1
-        cmpq $24, (%rsp) # identifier
-        je emit_load_array_access_runtime_identifier
-        movq $36, %rsi
-        movq 8(%rsp), %rdi
-        push $696969 # Field descriptor
-        push $696969 # Var descriptor
-        call retrieve_field_access
-        pop %rdi
-        addq $8, %rsp
+        movq  (%rsp), %rsi # Token id
+        movq 8(%rsp), %rdi # Token descriptor
         call find_array_assignment_by_identifier
         movq %rax, %rdi
         push $696969 # Stride
@@ -696,14 +689,10 @@ emit_load_array_access:
         push $696969 # Identifier desc
         push $696969 # Identifier id
         call retrieve_array_assignment
-        breakhere:
+        addq $24, %rsp
         pop %rax
-        pop %rax
-        pop %rax
-        pop %rax
-    emit_load_array_access_runtime_identifier:
-        pop %rsi
-        pop %rdi
+        pop %rsi # identifier id
+        pop %rdi # identifier token
         push %rax # Stride
         call get_offset_on_stack
         cltq
@@ -711,8 +700,8 @@ emit_load_array_access:
         imulq %rdx
         push %rax # Base offset
     # 2
-        movq 16(%rsp), %rdi
         movq 24(%rsp), %rsi
+        movq 16(%rsp), %rdi
         call visit_expression
     # 3
         call emit_pop
