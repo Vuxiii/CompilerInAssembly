@@ -1,4 +1,8 @@
 def main() {
+    run()
+}
+
+def run() {
     a = 0
     ptr = &a
     ~ptr = 2
@@ -7,30 +11,6 @@ def main() {
 }
 
 EOP
-ptr = &a
-
-~ptr = a
-
-    print(a)
-    *ptr = 49
-    
-    print(a)
-    a = 2
-    print(*ptr)
-POINTERS AND ADDRESSES
-def main() {
-    a = 0
-    
-Get the address of a
-    ptr = &a
-
-Assign the value 3 to the address ptr points to
-    *ptr =  3
-
-    
-    print( *point.ptr )
-
-}
 
 
 STRUCTS

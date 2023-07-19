@@ -104,6 +104,23 @@ visit_statement:
         je visit_while
         cmp $39, %rdi
         je visit_print
+        cmp $46, %rdi
+        je visit_function_call
+        leave
+        ret
+
+    visit_function_call:
+        movq %rsi, %rdi
+        push $696969 # arglist descriptor
+        push $696969 # identifier descriptor
+        call retrieve_function_call
+
+        call emit_call
+
+        pop %rdi
+        call emit_identifier        
+        call emit_newline
+
         leave
         ret
 
@@ -123,7 +140,7 @@ visit_statement:
         call emit_call
 
         call emit_print
-
+        call emit_newline
         leave
         ret
     visit_if:

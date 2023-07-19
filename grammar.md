@@ -173,6 +173,14 @@ deref: size = 8
     expr->type:  token_id
     expr->desc:  descriptor
 
+function_call: size = 8
+    type: 46
+    ident->desc: descriptor
+    arglist:     descriptor
+
+function_call_buffer: size = 8
+    [(ident_descriptor, arglist_descriptor),...]
+
 deref_buffer: size = 8
     [(expr_type, expr_descriptor),...]
 

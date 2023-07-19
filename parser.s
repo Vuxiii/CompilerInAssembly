@@ -26,8 +26,10 @@ _token_data_:                   .int 0
 _peek_data_:                    .int 0
 
 
+.global function_call_buffer
+        function_call_buffer:    .space 256
 .global deref_buffer
-        deref_buffer:        .space 256
+        deref_buffer:            .space 256
 .global addressof_buffer
         addressof_buffer:        .space 256
 .global array_assignment_buffer
@@ -35,7 +37,7 @@ _peek_data_:                    .int 0
 .global array_access_buffer
         array_access_buffer:     .space 256
 .global print_statement_buffer
-        print_statement_buffer: .space 256
+        print_statement_buffer:  .space 256
 .global struct_instance_buffer
         struct_instance_buffer: .space 256
 .global struct_type_buffer
@@ -70,7 +72,8 @@ print_statement_offset:         .int 0
 array_access_offset:            .int 0
 array_assignment_offset:        .int 0
 addressof_offset:               .int 0
-deref_offset:               .int 0
+deref_offset:                   .int 0
+function_call_offset:           .int 0
 
 .global function_offset
         function_offset:        .int 0
@@ -204,7 +207,7 @@ parse_statement:
         jmp assignment_
     
     function_call_:
-        // call function_call
+        call function_call
         push %rax # id
         push %rbx # descriptor
         jmp check_statement_list
@@ -219,7 +222,37 @@ parse_statement:
         jmp check_statement_list
 
     
-    
+// out rax: token id
+// out rbx: token descriptor
+.type function_call, @function
+function_call:
+        push %rbp
+        movq %rsp, %rbp
+        # Save the name
+        call current_token_data
+        push %rax
+
+        call next_token
+        # Current: '('
+        call current_token_id
+        cmp $5, %rax
+        jne emit_parse_error_missing_lparen
+
+        # Insert arg_list here
+
+        call next_token
+        # Current: ')'
+        call current_token_id
+        cmp $6, %rax
+        jne emit_parse_error_missing_rparen
+
+        movq $0, %rsi
+        pop %rdi
+        call construct_function_call
+        movq %rax, %rbx
+        movq $46, %rax
+        leave
+        ret
 
 // in  rdi: bool wrap identifier in deref
 // out rax: token id
@@ -1178,7 +1211,36 @@ emit_parse_error_exit:
         movq $1, %rdi
         syscall
 
+// in rdi: identifier descriptor
+// in rsi: arglist descriptor
+// out rax: token descriptor
+.global construct_function_call
+.type construct_function_call, @function
+construct_function_call:
+        push %rbp
+        movq %rsp, %rbp
 
+        mov function_call_offset(%rip), %eax
+        push %rax
+        
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea function_call_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+
+        pop %rax
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (function_call_offset)(%rip)
+        
+
+        leave
+        ret
+        
 // in rdi: expr tokenid
 // in rsi: expr descriptor
 // out rax: token descriptor
@@ -1709,6 +1771,30 @@ construct_while_node:
         leave
         ret
 
+// in rdi: Token descriptor
+// out 16(%rbp): identifier descriptor
+// out 24(%rbp): arglist descriptor
+.global retrieve_function_call
+.type retrieve_function_call, @function
+retrieve_function_call:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov %rdi, %rax
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea function_call_buffer(%rip), %rax
+        
+        mov   (%rax, %rbx), %edi
+        mov  4(%rax, %rbx), %esi
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+
+        leave
+        ret
 
 // in rdi: Token descriptor
 // out 16(%rbp): expr id
