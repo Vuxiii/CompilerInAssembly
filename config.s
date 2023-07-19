@@ -273,3 +273,8 @@
 
 .global error_unexpected_expr_expected_lvalue
         error_unexpected_expr_expected_lvalue: .asciz "Unexpected expression. Expected an lvalue.\n"
+
+.global error_unexpected_deref
+    error_unexpected_deref: .asciz "Unexpected deref.\n"
+.global error_missing_function_name
+    error_missing_function_name: .asciz "Missing function name.\n"

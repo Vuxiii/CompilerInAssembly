@@ -79,4 +79,17 @@ emit_unexpected_expr_expected_lvalue:
     movq $error_unexpected_expr_expected_lvalue, %rdi
     jmp emit_parse_error_exit
 
+.type emit_parse_error_unexpected_deref, @function
+.global emit_parse_error_unexpected_deref
+emit_parse_error_unexpected_deref:
+        
+    movq $error_unexpected_deref, %rdi
+    jmp emit_parse_error_exit
+
+.type emit_parse_error_missing_function_name, @function
+.global emit_parse_error_missing_function_name
+emit_parse_error_missing_function_name:
+        
+    movq $error_missing_function_name, %rdi
+    jmp emit_parse_error_exit
 

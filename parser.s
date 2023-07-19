@@ -104,282 +104,332 @@ parse_statement:
         # Check if we have an identifier
         # statement ::= 'identifier' '=' expression
         cmp $24, %rax
-        je maybe_assignment
+        je some_statement
         cmp $15, %rax # '*' deref
-        je deref_assignment
+        je deref_assignment_
         cmp $1, %rax
-        je function_statement
+        je function_statement_
         cmp $2, %rax
-        je if_statement
+        je if_statement_
         cmp $12, %rax
-        je while_statement
+        je while_statement_
         cmp $21, %rax
-        je struct_statement
+        je struct_statement_
         cmp $11, %rax
-        je print_statement
-
-        jmp node_is_not_statement
-
-
-    print_statement:
-        # Move the 'print' token to current
-        call next_token
-        
-        # Move the '(' token to current
-        call next_token
-        call current_token_id
-        cmp $5, %rax
-        jne emit_parse_error_missing_lparen
-
-        call parse_expression
-        push %rax # Store expression ID
-        push %rbx # Store expression descriptor
-
-        
-        # Move the ')' token to current
-        call next_token
-        call current_token_id
-        cmp $6, %rax
-        jne emit_parse_error_missing_rparen
-
-
-        # Construct the print statement
-
-        pop %rsi
-        pop %rdi
-        call construct_print_node
-        push $39
-        push %rax
-        jmp check_statement_list
-    struct_statement:
-            # We need to determine if this is a struct declaration or an assignment
-            # We do this by checking for the number og identifiers token
-            # [1]: A single identifier -> assign
-            # [2]: Two identifiers -> decl
-
-            # eat the struct
-            call next_token
-            # eat the first identifier
-            call next_token
-            
-            call current_token_id
-            cmp $24, %rax
-            jne emit_parse_error_expected_identifier
-
-            # Is the next token an '{' or an 'identifier'
-            call peek_token_id
-            cmp $24, %rax
-            je struct_instance
-        struct_declaration:
-            # This is a struct declaration
-            # Store the identifier for the struct definition
-            call current_token_data
-            movq %rax, %r10
-
-
-            # Parse the identifiers seperated by ','
-            # Count the number of identifiers
-            xor %r8, %r8
-        struct_field_count:
-            inc %r8
-            # We have: current -> Identifier
-            #          peek    -> ',' or '}'
-
-            # eat the seperator: '{' ',' '}'
-            call next_token
-            call peek_token_id # Just to check....
-            call peek_token_data
-            push %rax # Store the field descriptor
-
-            call next_token
-
-            call peek_token_id
-            cmp $35, %rax
-            je struct_field_count 
-
-            # eat the '}'
-            call next_token
-
-            call current_token_id
-            cmp $8, %rax
-            jne emit_parse_error_missing_rcurly
-
-            # We have length in rcx
-            # We have each field identifier on the stack
-            # We can load the address of the stack, and pass it to the constructor method
-            mov %r10, %rdi
-            leaq (%rsp), %rsi
-            mov %r8, %rdx
-            call construct_struct_decl_node
-            push $33
-            push %rax
-            movq %rax, %rsi
-            movq %r10, %rdi
-            call construct_struct_type
-            
-            jmp check_statement_list
-        
-        struct_instance:
-            # This is an struct instance
-
-            call current_token_data
-            movq %rax, %rdi # struct name
-            # Find the descriptor
-            call find_struct_type_by_name
-            push %rax
-            movq %rax, %rdi
-
-            call peek_token_data
-            movq %rax, %rsi # variable name
-            call construct_struct_instance
-
-            
-            push $38
-            push %rax
-            call next_token # Eat the variable name
-            
-            # Check if it is an array
-            call peek_token_id
-            cmp $9, %rax
-            jne check_statement_list
-        struct_instance_array:
-            
-            call parse_expression
-            push %rbx # The number of elements. MUST be number
-
-            # We need to find he stride and the count
-            movq 24(%rsp), %rdi
-            push $696969
-            push $696969 # count
-            push $696969
-            call retrieve_struct_decl
-            addq $8, %rsp
-            pop %rax
-            addq $8, %rsp
-            movq $8, %rdx
-            imulq %rdx
-            
-            pop %rdi        # Count descriptor
-            push %rax
-            call retrieve_number
-            movq %rax, %rdx # Count
-            pop %rcx        # stride
-            pop %rsi        # descriptor
-            pop %rdi        # type
-            call construct_array_assignment
-            push $40
-            push %rax
-            jmp check_statement_list
-
-    while_statement:
-        # eat the while
-        call next_token
-        # eat the '('
-        call next_token
-
-        call current_token_id
-        cmp $5, %rax
-        jne emit_parse_error_missing_lparen
-
-        # parse the expression
-        call parse_expression
-        push %rax # id
-        push %rbx # descriptor
-        # eat the ')'
-        call next_token
-
-        call current_token_id
-        cmp $6, %rax
-        jne emit_parse_error_missing_rparen
-        
-        # eat the '{'
-        call next_token
-
-        call current_token_id
-        cmp $7, %rax
-        jne emit_parse_error_missing_lcurly
-
+        je print_statement_
+    node_is_not_statement:
+        movq $0, %rax # None
+        leave
+        ret
+    single_statement:
+        # Store results
+        pop %rbx # Descriptor
+        pop %rax # Token ID
+        leave
+        ret
+    check_statement_list:
         call parse_statement
-        push %rax # id
-        push %rbx # descriptor
+        # Check if it was successfull
+        cmp $0, %rax
+        je single_statement
 
-        # eat the '}'
-        call next_token
+        push %rax
+        push %rbx
 
-        call current_token_id
-        cmp $8, %rax
-        jne emit_parse_error_missing_rcurly
+        # We now have the following:
+        # │token_descriptor│
+        # │    token_id    │ statement ??
+        # │token_descriptor│
+        # │    token_id    │ statement ??
+        # │      ...       │
+        # └────────────────┘
 
-        # Construct the while statement
         pop %rcx
         pop %rdx
         pop %rsi
         pop %rdi
-        call construct_while_node
-        push $32
+        call construct_statement_list
+        movq %rax, %rbx
+        movq $28, %rax
+        leave
+        ret
+
+    print_statement_:
+        call print_statement
         push %rax
+        push %rbx
+        jmp check_statement_list
         
+    struct_statement_:
+        call struct_statement
+        push %rax
+        push %rbx
         jmp check_statement_list
 
-    if_statement:
-        # eat the if
-        call next_token
+    while_statement_:
+        call while_statement
+        push %rax
+        push %rbx
+        jmp check_statement_list
 
-        # eat the '('
-        call next_token
+    if_statement_:
+        call if_statement
+        push %rax
+        push %rbx
+        jmp check_statement_list
 
+    function_statement_:
+        call function_statement
+        push %rax
+        push %rbx
+        jmp check_statement_list
+
+    deref_assignment_:
+        movq $1, %rdi
+        call assignment
+        push %rax
+        push %rbx
+        jmp check_statement_list
+
+    some_statement:
+        # Determine if it is a functioncall
+        # Or an assignment
+        call next_token
+        # current_token_id: identifier
+        call peek_token_id
+        cmp $5, %rax # We are dealing with a function call
+        #je function_call_
+        jmp assignment_
+    
+    #function_call_:
+        
+
+    assignment_:
+
+        movq $0, %rdi
+        call assignment
+        push %rax # id
+        push %rbx # descriptor
+        jmp check_statement_list
+
+    
+    
+
+// in  rdi: bool wrap identifier in deref
+// out rax: token id
+// out rbx: token descriptor
+.type assignment, @function
+assignment:
+        push %rbp
+        movq %rsp, %rbp
+        subq $8, %rsp
+        movq %rdi, -8(%rbp)
+
+        call peek_token_id
+        cmp $37, %rax # dot '.'
+        je assignment_field_acces
+        cmp $9, %rax # Is it '['
+        je assignment_array_identifier
+
+        # Check for function call
+        # We now assume '='
+
+        # current_token_id: identifier
+        # peek_token_id:    '='
         call current_token_id
-        cmp $5, %rax
-        jne emit_parse_error_missing_lparen
-
-        # parse the expression
+        push %rax
+        call current_token_data
+        push %rax
+    assignment_parse_rhs:
+        call next_token
+        # Parse the right hand side of the assignment
         call parse_expression
-        push %rax # id
-        push %rbx # descriptor
-        # eat the ')'
-        call next_token
+        // rax: token_id of output from parse_expression
+        // rbx: its token_descriptor
+        push %rax
+        push %rbx
 
-        call current_token_id
-        cmp $6, %rax
-        jne emit_parse_error_missing_rparen
-
-        # eat the '{'
-        call next_token
-
-        call current_token_id
-        cmp $7, %rax
-        jne emit_parse_error_missing_lcurly
-
-        call parse_statement
-        push %rax # id
-        push %rbx # descriptor
-
-        # eat the '}'
-        call next_token
-
-        call current_token_id
-        cmp $8, %rax
-        jne emit_parse_error_missing_rcurly
-
-        # Construct the if statement
+        # We now have the following:
+        # │ expr_descriptor│
+        # │    expr_id     │ 
+        # │   identifier   │
+        # │      ...       │
+        # └────────────────┘
+        
+        # Check if we need to wrap lhs in deref
+        movq -8(%rbp), %rax
+        cmp $0, %rax
+        je assignment_skip_wrap_in_deref
+        movq 16(%rsp), %rsi
+        movq 24(%rsp), %rdi
+        call construct_deref
+        movq %rax, 16(%rsp)
+        movq $44,  24(%rsp)
+    assignment_skip_wrap_in_deref:
         pop %rcx
         pop %rdx
         pop %rsi
         pop %rdi
-        call construct_if_node
-        push $31
+        call construct_assignment_node
+        movq %rax, %rbx # Store the assignment descriptor
+        movq $29, %rax  # Store the assignment id
+        leave
+        ret
+    assignment_field_acces:
+        call current_token_data
+        push %rax # Store the variable descriptor
+        # Peek has '.'
+        call next_token
+
+        call peek_token_data
+        push %rax # Store the field descriptor
+
+        pop %rsi
+        pop %rdi
+        call construct_field_access_node
+        push $36
         push %rax
+        call next_token
+        # Current: 'identifier'
+        // TODO! Check peek for '[' or '='
+        jmp assignment_parse_rhs
+    assignment_array_identifier:
+        # Store identifier
+        call current_token_id
+        push %rax
+        call current_token_data
+        push %rax
+        call next_token
 
-        jmp check_statement_list
+        call current_token_id
+        cmp $9, %rax
+        jne emit_parse_error_missing_lbracket
 
-    function_statement:
+        # current: '['
+        # TODO! Add error handling here.
+        # For now, just assume it is a number
+        call parse_expression
+        push %rax
+        push %rbx
 
-        # eat the def
+        call next_token
+        # current: ']'
+
+        call current_token_id
+        cmp $10, %rax
+        jne emit_parse_error_missing_rbracket
+
+        # At this point, it be
+        # * An array initialization 
+        # * An array access. 
+        # * A field array access 
+
+        call peek_token_id
+        cmp $4, %rax
+        je assignment_array_identifier_access
+        cmp $37, %rax # dot '.'
+        je assignment_array_field_access
+    assignment_array:
+        movq   (%rsp), %rdx # count
+        movq 16(%rsp), %rsi # Token descriptor
+        movq 24(%rsp), %rdi # Token id
+        movq $8, %rcx       # Stride, ints are 8 bytes
+        call construct_array_assignment
+        movq %rax, %rbx
+        movq $40, %rax
+
+        # Check if '*' was present. If it was there was an error
+        movq -8(%rbp), %rcx
+        cmp $1, %rcx
+        je emit_parse_error_unexpected_deref
+        leave
+        ret
+    assignment_array_identifier_access:
+        pop %rcx # index descriptor
+        pop %rdx # index type
+        pop %rsi # identifier descriptor
+        pop %rdi # identifier id
+        call construct_array_access
+        push $41
+        push %rax
+        jmp assignment_parse_rhs
+    assignment_array_field_access:
+        # At this point we need to identify the fields that are accessed. We can then construct a field access and replace it with the identifier descriptor and id.
+        call next_token
+        # Current: '.'
+        # peek: 'identifier'
+        
+        call peek_token_id
+        cmp $24, %rax
+        jne emit_parse_error_expected_identifier
+
+        call peek_token_data # The field
+        movq 16(%rsp), %rdi
+        movq %rax, %rsi
+        call construct_field_access_node
+        movq %rax, %rsi
+        movq $36, %rdi
+        pop %rcx
+        pop %rdx
+        addq $16, %rsp
+        call construct_array_access
+        push $41
+        push %rax
+        call next_token
+        jmp assignment_parse_rhs
+
+// out rax: token id
+// out rbx: token descriptor
+.type deref_assignment, @function
+deref_assignment:
+        push %rbp
+        movq %rsp, %rbp
+
+        call next_token
+        # Current: '*'
+        
+        # Assume for now that we only accept identifiers
+        call next_token
+        # Current: 'identifier'
+        call current_token_id
+        movq %rax, %rdi
+        call current_token_data
+        movq %rax, %rsi
+
+        call construct_deref
+        push $44
+        push %rax
+        
+        call next_token
+        # Current: '='        
+
+        call parse_expression
+        push %rax
+        push %rbx
+
+        pop %rcx
+        pop %rdx
+        pop %rsi
+        pop %rdi
+        call construct_assignment_node
+        movq %rax, %rbx # Store the assignment descriptor
+        movq $29, %rax  # Store the assignment id
+
+        leave
+        ret
+// out rax: token id
+// out rbx: token descriptor
+.type function_statement, @function
+function_statement:
+        push %rbp
+        movq %rsp, %rbp
+
+                # eat the def
         call next_token
         # Do we have an identifier?
         call peek_token_id
         cmp $24, %rax
-        jne node_is_not_statement # Parse error!
+        jne emit_parse_error_missing_function_name
 
         # We have an identifier
         # Check for '(' ')'
@@ -427,226 +477,295 @@ parse_statement:
         pop %rsi # body id
         pop %rdi # identifier descriptor
         call construct_function_node
-        push $30
-        push %rax
+        movq %rax, %rbx
+        movq $30, %rax
 
-        jmp check_statement_list
+        leave
+        ret
 
-    maybe_assignment:
-        // Check the assignment '='
+// out rax: token id
+// out rbx: token descriptor
+.type if_statement, @function
+if_statement:
+        push %rbp
+        movq %rsp, %rbp
+        
+        # eat the if
+        call next_token
+
+        # eat the '('
+        call next_token
+
+        call current_token_id
+        cmp $5, %rax
+        jne emit_parse_error_missing_lparen
+
+        # parse the expression
+        call parse_expression
+        push %rax # id
+        push %rbx # descriptor
+        # eat the ')'
+        call next_token
+
+        call current_token_id
+        cmp $6, %rax
+        jne emit_parse_error_missing_rparen
+
+        # eat the '{'
+        call next_token
+
+        call current_token_id
+        cmp $7, %rax
+        jne emit_parse_error_missing_lcurly
+
+        call parse_statement
+        push %rax # id
+        push %rbx # descriptor
+
+        # eat the '}'
+        call next_token
+
+        call current_token_id
+        cmp $8, %rax
+        jne emit_parse_error_missing_rcurly
+
+        # Construct the if statement
+        pop %rcx
+        pop %rdx
+        pop %rsi
+        pop %rdi
+        call construct_if_node
+        movq %rax, %rbx
+        movq $31, %rax
+        leave
+        ret
+
+// out rax: token id
+// out rbx: token descriptor
+.type while_statement, @function
+while_statement:
+        push %rbp
+        movq %rsp, %rbp
+
+        call next_token
+        # Current: "While"
+        call next_token
+        # Current: '('
+
+        call current_token_id
+        cmp $5, %rax
+        jne emit_parse_error_missing_lparen
+
+        # parse the expression
+        call parse_expression
+        push %rax # id
+        push %rbx # descriptor
         
         call next_token
-        # current_token_id: identifier
-        call peek_token_id
-        cmp $37, %rax # dot '.'
-        je assignment_field_acces
-        cmp $9, %rax # Is it '['
-        je assignment_array_identifier
+        # current: ')'
 
-        # We now assume '='
-
-        # current_token_id: identifier
-        # peek_token_id:    '='
         call current_token_id
-        push %rax
-        call current_token_data
-        push %rax
-    assignment_parse_rhs:
+        cmp $6, %rax
+        jne emit_parse_error_missing_rparen
+        
+        # eat the '{'
         call next_token
-        # Parse the right hand side of the assignment
-        call parse_expression
-        // rax: token_id of output from parse_expression
-        // rbx: its token_descriptor
-        push %rax
-        push %rbx
 
-        # We now have the following:
-        # │ expr_descriptor│
-        # │    expr_id     │ 
-        # │   identifier   │
-        # │      ...       │
-        # └────────────────┘
-        pop %rcx
-        pop %rdx
-        pop %rsi
-        pop %rdi
-        call construct_assignment_node
-        push $29  # Store the assignment id
-        push %rax # Store the assignment descriptor
-    
-    check_statement_list:
+        call current_token_id
+        cmp $7, %rax
+        jne emit_parse_error_missing_lcurly
+
         call parse_statement
-        # Check if it was successfull
-        cmp $0, %rax
-        je single_statement
+        push %rax # id
+        push %rbx # descriptor
 
-        push %rax
-        push %rbx
+        # eat the '}'
+        call next_token
 
-        # We now have the following:
-        # │token_descriptor│
-        # │    token_id    │ statement ??
-        # │token_descriptor│
-        # │    token_id    │ statement ??
-        # │      ...       │
-        # └────────────────┘
+        call current_token_id
+        cmp $8, %rax
+        jne emit_parse_error_missing_rcurly
 
+        # Construct the while statement
         pop %rcx
         pop %rdx
         pop %rsi
         pop %rdi
-        call construct_statement_list
+        call construct_while_node
         movq %rax, %rbx
-        movq $28, %rax
+        movq $32, %rax
         leave
         ret
+// out rax: token id
+// out rbx: token descriptor
+.type struct_statement, @function
+struct_statement:
+        push %rbp
+        movq %rsp, %rbp
+        # We need to determine if this is a struct declaration or an assignment
+        # We do this by checking for the number og identifiers token
+        # [1]: A single identifier -> assign
+        # [2]: Two identifiers -> decl
 
-    single_statement:
-        # Store results
-        pop %rbx # Descriptor
-        pop %rax # Token ID
+        # eat the struct
+        call next_token
+        # eat the first identifier
+        call next_token
+        
+        call current_token_id
+        cmp $24, %rax
+        jne emit_parse_error_expected_identifier
+
+        # Is the next token an '{' or an 'identifier'
+        call peek_token_id
+        cmp $24, %rax
+        je struct_instance
+    struct_declaration:
+        # This is a struct declaration
+        # Store the identifier for the struct definition
+        call current_token_data
+        movq %rax, %r10
+
+
+        # Parse the identifiers seperated by ','
+        # Count the number of identifiers
+        xor %r8, %r8
+    struct_field_count:
+        inc %r8
+        # We have: current -> Identifier
+        #          peek    -> ',' or '}'
+
+        # eat the seperator: '{' ',' '}'
+        call next_token
+        call peek_token_id # Just to check....
+        call peek_token_data
+        push %rax # Store the field descriptor
+
+        call next_token
+
+        call peek_token_id
+        cmp $35, %rax
+        je struct_field_count 
+
+        # eat the '}'
+        call next_token
+
+        call current_token_id
+        cmp $8, %rax
+        jne emit_parse_error_missing_rcurly
+
+        # We have length in rcx
+        # We have each field identifier on the stack
+        # We can load the address of the stack, and pass it to the constructor method
+        mov %r10, %rdi
+        leaq (%rsp), %rsi
+        mov %r8, %rdx
+        call construct_struct_decl_node
+        push $33
+        push %rax
+        movq %rax, %rsi
+        movq %r10, %rdi
+        call construct_struct_type
+        
+        pop %rbx
+        pop %rax
         leave
-        ret
+        ret    
+    struct_instance:
+        # This is an struct instance
 
-    statement_is_not_assignment_restore_last_token:
+        call current_token_data
+        movq %rax, %rdi # struct name
+        # Find the descriptor
+        call find_struct_type_by_name
+        push %rax
+        movq %rax, %rdi
+
+        call peek_token_data
+        movq %rax, %rsi # variable name
+        call construct_struct_instance
+        push $38
+        push %rax
+
+        call next_token # Eat the variable name
+        
+        # Check if it is an array
+        call peek_token_id
+        cmp $9, %rax
+        je struct_instance_array
+
         pop %rbx
         pop %rax
         leave
         ret
-    deref_assignment:
-        call next_token
-        # Current: '*'
+    struct_instance_array:
         
-        # Assume for now that we only accept identifiers
-        call next_token
-        # Current: 'identifier'
-        call current_token_id
-        movq %rax, %rdi
-        call current_token_data
-        movq %rax, %rsi
+        call parse_expression
+        push %rbx # The number of elements. MUST be number
 
-        call construct_deref
-        push $44
-        push %rax
+        # We need to find he stride and the count
+        movq 24(%rsp), %rdi
+        push $696969
+        push $696969 # count
+        push $696969
+        call retrieve_struct_decl
+        addq $8, %rsp
+        pop %rax
+        addq $8, %rsp
+        movq $8, %rdx
+        imulq %rdx
         
-        call next_token
-        # Current: '='        
-
-        call parse_expression
+        pop %rdi        # Count descriptor
         push %rax
-        push %rbx
-
-        pop %rcx
-        pop %rdx
-        pop %rsi
-        pop %rdi
-        call construct_assignment_node
-        push $29  # Store the assignment id
-        push %rax # Store the assignment descriptor
-        jmp check_statement_list
-
-    assignment_array_identifier:
-        # Store identifier
-        call current_token_id
-        push %rax
-        call current_token_data
-        push %rax
-        call next_token
-
-        call current_token_id
-        cmp $9, %rax
-        jne emit_parse_error_missing_lbracket
-
-        # current: '['
-        # TODO! Add error handling here.
-        # For now, just assume it is a number
-        call parse_expression
-        push %rax
-        push %rbx
-
-        call next_token
-        # current: ']'
-
-        call current_token_id
-        cmp $10, %rax
-        jne emit_parse_error_missing_rbracket
-
-        # At this point, it be
-        # * An array initialization 
-        # * An array access. 
-        # * A field array access 
-
-        call peek_token_id
-        cmp $4, %rax
-        je assignment_array_identifier_access
-        cmp $37, %rax # dot '.'
-        je assignment_array_field_access
-        movq   (%rsp), %rdx # count
-        movq 16(%rsp), %rsi # Token descriptor
-        movq 24(%rsp), %rdi # Token id
-        movq $8, %rcx       # Stride, ints are 8 bytes
+        call retrieve_number
+        movq %rax, %rdx # Count
+        pop %rcx        # stride
+        pop %rsi        # descriptor
+        pop %rdi        # type
         call construct_array_assignment
-        push $40
-        push %rax
-        jmp check_statement_list
-    assignment_array_field_access:
-        # At this point we need to identify the fields that are accessed. We can then construct a field access and replace it with the identifier descriptor and id.
-        call next_token
-        # Current: '.'
-        # peek: 'identifier'
-        
-        call peek_token_id
-        cmp $24, %rax
-        jne emit_parse_error_expected_identifier
-
-        call peek_token_data # The field
-        movq 16(%rsp), %rdi
-        movq %rax, %rsi
-        call construct_field_access_node
-        movq %rax, %rsi
-        movq $36, %rdi
-        pop %rcx
-        pop %rdx
-        addq $16, %rsp
-        call construct_array_access
-        push $41
-        push %rax
-        call next_token
-        jmp assignment_parse_rhs
-    assignment_array_identifier_access:
-        
-        pop %rcx # index descriptor
-        pop %rdx # index type
-        pop %rsi # identifier descriptor
-        pop %rdi # identifier id
-        call construct_array_access
-        push $41
-        push %rax
-        jmp assignment_parse_rhs
-    assignment_field_acces:
-        call current_token_data
-        push %rax # Store the variable descriptor
-        # Peek has '.'
-        call next_token
-
-        call peek_token_data
-        push %rax # Store the field descriptor
-
-        pop %rsi
-        pop %rdi
-        call construct_field_access_node
-        push $36
-        push %rax
-        call next_token
-        jmp assignment_parse_rhs
-    node_is_not_statement:
-        movq $0, %rax # None
+        movq %rax, %rbx
+        movq $40, %rax
         leave
         ret
 
-.type parse_expression, @function
+// out rax: token id
+// out rbx: token descriptor
+.type print_statement, @function
+print_statement:
+        push %rbp
+        movq %rsp, %rbp
+        # Move the 'print' token to current
+        call next_token
+        
+        # Move the '(' token to current
+        call next_token
+        call current_token_id
+        cmp $5, %rax
+        jne emit_parse_error_missing_lparen
+
+        call parse_expression
+        push %rax # Store expression ID
+        push %rbx # Store expression descriptor
+
+        # Move the ')' token to current
+        call next_token
+        call current_token_id
+        cmp $6, %rax
+        jne emit_parse_error_missing_rparen
+
+        # Construct the print statement
+
+        pop %rsi
+        pop %rdi
+        call construct_print_node
+        movq %rax, %rbx
+        movq $39, %rax
+        leave
+        ret
+
 // out rax: token_id
 // out rbx: descriptor
+.type parse_expression, @function
 parse_expression:
         push %rbp
         mov %rsp, %rbp
