@@ -268,6 +268,8 @@
         error_parse_missing_statement: .asciz "No statement present.\n"
 .global error_parse_expected_identifier
         error_parse_expected_identifier: .asciz "Expected an identifier.\n"
+.global error_parse_expected_number
+        error_parse_expected_number: .asciz "Expected a number.\n"
 .global error_missing_main_function
         error_missing_main_function: .asciz "Missing the main function 'main()'.\n"
 
@@ -278,3 +280,7 @@
     error_unexpected_deref: .asciz "Unexpected deref.\n"
 .global error_missing_function_name
     error_missing_function_name: .asciz "Missing function name.\n"
+
+.global error_not_implemented
+    error_not_implemented: .asciz "This feature is not yet implemented.\n"
+

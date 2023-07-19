@@ -72,6 +72,13 @@ emit_parse_error_expected_identifier:
     movq $error_parse_expected_identifier, %rdi
     jmp emit_parse_error_exit
 
+.type emit_parse_error_expected_number, @function
+.global emit_parse_error_expected_number
+emit_parse_error_expected_number:
+        
+    movq $error_parse_expected_number, %rdi
+    jmp emit_parse_error_exit
+
 .type emit_unexpected_expr_expected_lvalue, @function
 .global emit_unexpected_expr_expected_lvalue
 emit_unexpected_expr_expected_lvalue:
@@ -93,3 +100,9 @@ emit_parse_error_missing_function_name:
     movq $error_missing_function_name, %rdi
     jmp emit_parse_error_exit
 
+.type emit_not_implemented, @function
+.global emit_not_implemented
+emit_not_implemented:
+        
+    movq $error_not_implemented, %rdi
+    jmp emit_parse_error_exit

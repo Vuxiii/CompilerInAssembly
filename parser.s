@@ -292,6 +292,29 @@ assignment:
         call next_token
         # Current: 'identifier'
         // TODO! Check peek for '[' or '='
+
+        call peek_token_id
+        cmp $4, %rax
+        je assignment_parse_rhs
+        
+        cmp $9, %rax
+        jne emit_parse_error_missing_lbracket
+
+        call next_token
+        # Current: '['
+
+        call parse_expression
+        push %rax
+        push %rbx
+        call next_token
+        # Current: ']'
+
+        call current_token_id
+        cmp $10, %rax
+        jne emit_parse_error_missing_rbracket
+        
+        jmp emit_not_implemented
+
         jmp assignment_parse_rhs
     assignment_array_identifier:
         # Store identifier
@@ -311,6 +334,9 @@ assignment:
         call parse_expression
         push %rax
         push %rbx
+
+        cmp $25, %rax
+        jne emit_parse_error_expected_number
 
         call next_token
         # current: ']'
