@@ -1,4 +1,13 @@
-def asd() {
+def main() {
+    a = 69
+    ptr = &a
+
+    print(a)
+    *ptr = 49
+    
+    print(a)
+    a = 2
+    print(*ptr)
 }
 
 EOP

@@ -16,16 +16,14 @@
 .extern number     # 12
 .extern identifier # 13
 
-.extern MAP_PRIVATE
 .extern number_0
 .extern number_9
 
 .extern filename
 .extern filesize
 .extern buffer_address
+
 .section .text
-
-
 
 // in rdi: file name to read
 // This function fills the buffer address

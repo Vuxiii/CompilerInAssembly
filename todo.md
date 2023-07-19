@@ -13,8 +13,8 @@
 2. Lexer
     a. Add support for string literals Lexer
     b. Reading from std in
-3. Pointers & Addresses
-4. Allocate memory
+3. Allocate memory
+4. Rewrite the parser for statements.
 
 ## Nice to have
 

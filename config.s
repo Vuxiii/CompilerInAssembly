@@ -270,3 +270,6 @@
         error_parse_expected_identifier: .asciz "Expected an identifier.\n"
 .global error_missing_main_function
         error_missing_main_function: .asciz "Missing the main function 'main()'.\n"
+
+.global error_unexpected_expr_expected_lvalue
+        error_unexpected_expr_expected_lvalue: .asciz "Unexpected expression. Expected an lvalue.\n"

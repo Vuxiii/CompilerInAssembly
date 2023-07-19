@@ -163,6 +163,22 @@ array_access: size = 16
     index->type: token_id
     index->desc: descriptor
 
+addressof: size = 8
+    type: 43
+    expr->type:  token_id
+    expr->desc:  descriptor
+
+deref: size = 8
+    type: 44
+    expr->type:  token_id
+    expr->desc:  descriptor
+
+deref_buffer: size = 8
+    [(expr_type, expr_descriptor),...]
+
+addressof_buffer: size = 8
+    [(expr_type, expr_descriptor),...]
+
 array_assignment_buffer: size = 16
     [(ident_type, ident_descriptor, count, stride),...]
 

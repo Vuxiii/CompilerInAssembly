@@ -72,4 +72,11 @@ emit_parse_error_expected_identifier:
     movq $error_parse_expected_identifier, %rdi
     jmp emit_parse_error_exit
 
+.type emit_unexpected_expr_expected_lvalue, @function
+.global emit_unexpected_expr_expected_lvalue
+emit_unexpected_expr_expected_lvalue:
+        
+    movq $error_unexpected_expr_expected_lvalue, %rdi
+    jmp emit_parse_error_exit
+
 

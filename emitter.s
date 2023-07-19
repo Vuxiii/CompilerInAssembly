@@ -320,6 +320,8 @@ visit_statement:
         movq (%rsp), %rdi
         cmp $41, %rdi # Array Access
         je visit_assignment_array_access
+
+        
         
         # Eval the right side
         movq 16(%rsp), %rdi
@@ -328,9 +330,17 @@ visit_statement:
 
         call emit_pop
         call emit_rax
+
+        movq (%rsp), %rsi
+        # Check if we have a deref
+        cmp $44, %rsi
+        je visit_assignment_deref
+
         call emit_mov
         call emit_rax
         call emit_comma
+
+        
 
         pop %rsi
         pop %rdi
@@ -338,6 +348,28 @@ visit_statement:
 
         call emit_newline
 
+        leave
+        ret
+
+    visit_assignment_deref:
+        call emit_mov
+        pop %rsi
+        pop %rdi
+        push $696969
+        push $696969
+        call retrieve_deref
+        pop %rsi
+        pop %rdi
+        call emit_var
+        call emit_comma
+        call emit_rbx
+        call emit_mov
+        call emit_rax
+        call emit_comma
+        call emit_lparen
+        call emit_rbx
+        call emit_rparen
+        call emit_newline
         leave
         ret
 
@@ -445,8 +477,58 @@ visit_expression:
         je identifier
         cmp $41, %rdi # array access
         je array_access
+        cmp $43, %rdi # addressof
+        je addressof
+        cmp $44, %rdi # eref
+        je deref
         # It was neither a binary op nor a number
         leave 
+        ret
+    deref:
+        movq %rsi, %rdi
+        push $696969 # expr descriptor
+        push $696969 # expr id
+        call retrieve_deref
+
+        movq (%rsp), %rdi
+        cmp $24, %rdi # Must be an lvalue
+        jne emit_unexpected_expr_expected_lvalue
+
+        call emit_mov
+
+        pop %rsi
+        pop %rdi
+        call emit_var
+        call emit_comma
+        call emit_rax
+        call emit_push
+        call emit_lparen
+        call emit_rax
+        call emit_rparen
+
+        leave
+        ret
+    addressof:
+        movq %rsi, %rdi
+        push $696969 # expr descriptor
+        push $696969 # expr id
+        call retrieve_addressof
+
+        movq (%rsp), %rdi
+        cmp $24, %rdi # Must be an lvalue
+        jne emit_unexpected_expr_expected_lvalue
+
+        call emit_lea
+
+        pop %rsi
+        pop %rdi
+        call emit_var
+        call emit_comma
+        call emit_rax
+        call emit_push
+        call emit_rax
+
+        leave
         ret
     array_access:
         push %rsi

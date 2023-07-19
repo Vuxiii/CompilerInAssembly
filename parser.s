@@ -26,10 +26,14 @@ _token_data_:                   .int 0
 _peek_data_:                    .int 0
 
 
+.global deref_buffer
+        deref_buffer:        .space 256
+.global addressof_buffer
+        addressof_buffer:        .space 256
 .global array_assignment_buffer
         array_assignment_buffer: .space 256
 .global array_access_buffer
-        array_access_buffer: .space 256
+        array_access_buffer:     .space 256
 .global print_statement_buffer
         print_statement_buffer: .space 256
 .global struct_instance_buffer
@@ -52,6 +56,7 @@ _peek_data_:                    .int 0
         assignment_buffer:      .space 256
 .global binary_op_buffer
         binary_op_buffer:       .space 256
+
 field_access_offset:            .int 0
 binary_op_offset:               .int 0
 assignment_offset:              .int 0
@@ -64,6 +69,9 @@ struct_instance_offset:         .int 0
 print_statement_offset:         .int 0
 array_access_offset:            .int 0
 array_assignment_offset:        .int 0
+addressof_offset:               .int 0
+deref_offset:               .int 0
+
 .global function_offset
         function_offset:        .int 0
 
@@ -97,6 +105,8 @@ parse_statement:
         # statement ::= 'identifier' '=' expression
         cmp $24, %rax
         je maybe_assignment
+        cmp $15, %rax # '*' deref
+        je deref_assignment
         cmp $1, %rax
         je function_statement
         cmp $2, %rax
@@ -503,6 +513,38 @@ parse_statement:
         pop %rax
         leave
         ret
+    deref_assignment:
+        call next_token
+        # Current: '*'
+        
+        # Assume for now that we only accept identifiers
+        call next_token
+        # Current: 'identifier'
+        call current_token_id
+        movq %rax, %rdi
+        call current_token_data
+        movq %rax, %rsi
+
+        call construct_deref
+        push $44
+        push %rax
+        
+        call next_token
+        # Current: '='        
+
+        call parse_expression
+        push %rax
+        push %rbx
+
+        pop %rcx
+        pop %rdx
+        pop %rsi
+        pop %rdi
+        call construct_assignment_node
+        push $29  # Store the assignment id
+        push %rax # Store the assignment descriptor
+        jmp check_statement_list
+
     assignment_array_identifier:
         # Store identifier
         call current_token_id
@@ -768,6 +810,8 @@ parse_expression:
     # [4]: 'identifier' '[' expr ']'
     # [5]: 'identifier' '.' 'identifier'
     # [6]: 'identifier' '.' 'identifier' '[' expr ']'
+    # [7]: '&' expr
+    # [8]: '*' expr
             push %rbp
             mov %rsp, %rbp
             call peek_token_id
@@ -775,6 +819,10 @@ parse_expression:
             je parse_token_return_number
             cmp $24, %rax
             je parse_token_return_identifier
+            cmp $42, %rax
+            je parse_token_return_addressof
+            cmp $15, %rax
+            je parse_token_return_deref
         # Case [1]
             # Consume the '('
             call next_token
@@ -890,6 +938,34 @@ parse_expression:
             movq $41, %rax
             leave
             ret
+        parse_token_return_addressof:
+        # Case [7]
+            call next_token
+            # current: '&'
+
+            call parse_expression
+            movq %rax, %rdi
+            movq %rbx, %rsi
+
+            call construct_addressof
+            movq %rax, %rbx
+            movq $43, %rax
+            leave
+            ret
+        parse_token_return_deref:
+        # Case [8]
+            call next_token
+            # current: '*'
+
+            call parse_expression
+            movq %rax, %rdi
+            movq %rbx, %rsi
+
+            call construct_deref
+            movq %rax, %rbx
+            movq $44, %rax
+            leave
+            ret
 
 
 // in rdi: error buffer
@@ -951,8 +1027,70 @@ emit_parse_error_exit:
         movq $1, %rdi
         syscall
 
+
+// in rdi: expr tokenid
+// in rsi: expr descriptor
+// out rax: token descriptor
+.global construct_deref
+.type construct_deref, @function
+construct_deref:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov deref_offset(%rip), %eax
+        push %rax
+        
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea deref_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+
+        pop %rax
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (deref_offset)(%rip)
+        
+
+        leave
+        ret
+
+// in rdi: expr tokenid
+// in rsi: expr descriptor
+// out rax: token descriptor
+.global construct_addressof
+.type construct_addressof, @function
+construct_addressof:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov addressof_offset(%rip), %eax
+        push %rax
+        
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea addressof_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+
+        pop %rax
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (addressof_offset)(%rip)
+        
+
+        leave
+        ret
+
 // in rdi: name descriptor
 // in rsi: struct descriptor
+// out rax: token descriptor
 .type construct_struct_type, @function
 construct_struct_type:
         push %rbp
@@ -970,9 +1108,10 @@ construct_struct_type:
         mov %esi,  4(%rax, %rbx)
 
         pop %rax
-        inc %eax
+        movq %rax, %rbx
+        inc %ebx
         # Store next available descriptor 
-        mov %eax, (struct_type_offset)(%rip)
+        mov %ebx, (struct_type_offset)(%rip)
         
         leave
         ret
@@ -1415,6 +1554,57 @@ construct_while_node:
         inc %ebx
         # Store next available descriptor 
         mov %ebx, (while_offset)(%rip)
+
+        leave
+        ret
+
+
+// in rdi: Token descriptor
+// out 16(%rbp): expr id
+// out 24(%rbp): expr descriptor
+.global retrieve_deref
+.type retrieve_deref, @function
+retrieve_deref:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov %rdi, %rax
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea deref_buffer(%rip), %rax
+        
+        mov   (%rax, %rbx), %edi
+        mov  4(%rax, %rbx), %esi
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+
+        leave
+        ret
+
+// in rdi: Token descriptor
+// out 16(%rbp): expr id
+// out 24(%rbp): expr descriptor
+.global retrieve_addressof
+.type retrieve_addressof, @function
+retrieve_addressof:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov %rdi, %rax
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea addressof_buffer(%rip), %rax
+        
+        mov   (%rax, %rbx), %edi
+        mov  4(%rax, %rbx), %esi
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
 
         leave
         ret
