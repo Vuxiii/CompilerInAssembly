@@ -134,6 +134,24 @@ copy_string:
     jne copy_string           # Jump to movsb_loop if the byte is not zero
     ret
 
+// in  rdi: buffer
+// out rax: len in bytes
+.global count_string_len
+.type count_string_len, @function
+count_string_len:
+        push %rbp
+        movq %rsp, %rbp
+        xor %rax, %rax
+    count_len:
+        inc %rax
+        movb (%rdi), %bl
+        inc %rdi
+        test %bl, %bl
+        jnz count_len
+        leave
+        ret
+
+
 # IN: %rcx: offset into buffer.
 # IN: %rdx: Bytes to read
 .global read_char

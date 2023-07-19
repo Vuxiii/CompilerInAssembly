@@ -83,6 +83,8 @@
         token_comma:      .asciz ","     # 35
 .global token_dot
         token_dot:        .asciz "."     # 37
+.global token_ampersand
+        token_ampersand:  .asciz "&"     # 42
 
 .global number_0
         number_0:   .asciz "0" # value: 48
@@ -262,7 +264,9 @@
         error_parse_missing_lcurly: .asciz "Missing a '{' token.\n"
 .global error_parse_missing_rcurly
         error_parse_missing_rcurly: .asciz "Missing a '}' token.\n"
-.global error_parse_missing_missing_statement
-        error_parse_missing_missing_statement: .asciz "No statement present.\n"
+.global error_parse_missing_statement
+        error_parse_missing_statement: .asciz "No statement present.\n"
 .global error_parse_expected_identifier
         error_parse_expected_identifier: .asciz "Expected an identifier.\n"
+.global error_missing_main_function
+        error_missing_main_function: .asciz "Missing the main function 'main()'.\n"

@@ -355,6 +355,14 @@ identify_token:
         cmp $1, %ax
         je return_dot_token
 
+        movq %rdx, %rdi
+        movq $token_ampersand, %rsi
+        callq cmp_string
+        cmp $1, %ax
+        je return_ampersand_token
+
+        
+
         movq $0, %rbx
         movq $0, %rax
         ret
@@ -514,6 +522,12 @@ identify_token:
 
             movq $0, %rbx
             movq $37, %rax
+            ret
+        return_ampersand_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $42, %rax
             ret
         return_eop_token:
             movq %rdi, (buffer_address)(%rip)

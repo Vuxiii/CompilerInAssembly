@@ -25,6 +25,8 @@ collect:
         # We want to iterate over each funciton. This can be done by iterating over the function_buffer.
         xor %rcx, %rcx
         mov function_offset(%rip), %ecx # Total amount of functions
+        cmp $0, %ecx
+        je emit_missing_main_function
         xor %rbx, %rbx
     loop_begin:
         dec %rcx

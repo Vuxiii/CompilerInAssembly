@@ -1,5 +1,5 @@
-main: main.o lexer.o config.o utils.o parser.o symbol.o emitter.o astprint.o
-	ld -o main main.o lexer.o parser.o symbol.o emitter.o config.o utils.o astprint.o
+main: main.o lexer.o config.o utils.o parser.o symbol.o emitter.o astprint.o errors.o
+	ld -g -o main main.o lexer.o parser.o symbol.o emitter.o config.o utils.o errors.o astprint.o
 
 main.o: main.s
 	as -ggdb main.s -o main.o
@@ -24,6 +24,9 @@ astprint.o: astprint.s
 
 utils.o: utils.s
 	as -ggdb utils.s -o utils.o
+
+errors.o: errors.s
+	as -ggdb errors.s -o errors.o
 
 phony: clean run crun
 

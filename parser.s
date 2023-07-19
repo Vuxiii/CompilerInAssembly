@@ -119,9 +119,7 @@ parse_statement:
         call next_token
         call current_token_id
         cmp $5, %rax
-        movq $error_parse_missing_lparen, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_lparen
 
         call parse_expression
         push %rax # Store expression ID
@@ -132,9 +130,7 @@ parse_statement:
         call next_token
         call current_token_id
         cmp $6, %rax
-        movq $error_parse_missing_rparen, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_rparen
 
 
         # Construct the print statement
@@ -158,9 +154,7 @@ parse_statement:
             
             call current_token_id
             cmp $24, %rax
-            movq $error_parse_expected_identifier, %r15
-            cmovne %r15, %rdi
-            jne emit_parse_error_exit
+            jne emit_parse_error_expected_identifier
 
             # Is the next token an '{' or an 'identifier'
             call peek_token_id
@@ -198,9 +192,7 @@ parse_statement:
 
             call current_token_id
             cmp $8, %rax
-            movq $error_parse_missing_rcurly, %r15
-            cmovne %r15, %rdi
-            jne emit_parse_error_exit
+            jne emit_parse_error_missing_rcurly
 
             # We have length in rcx
             # We have each field identifier on the stack
@@ -277,9 +269,7 @@ parse_statement:
 
         call current_token_id
         cmp $5, %rax
-        movq $error_parse_missing_lparen, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_lparen
 
         # parse the expression
         call parse_expression
@@ -290,18 +280,14 @@ parse_statement:
 
         call current_token_id
         cmp $6, %rax
-        movq $error_parse_missing_rparen, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_rparen
         
         # eat the '{'
         call next_token
 
         call current_token_id
         cmp $7, %rax
-        movq $error_parse_missing_lcurly, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_lcurly
 
         call parse_statement
         push %rax # id
@@ -312,9 +298,7 @@ parse_statement:
 
         call current_token_id
         cmp $8, %rax
-        movq $error_parse_missing_rcurly, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_rcurly
 
         # Construct the while statement
         pop %rcx
@@ -336,9 +320,7 @@ parse_statement:
 
         call current_token_id
         cmp $5, %rax
-        movq $error_parse_missing_lparen, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_lparen
 
         # parse the expression
         call parse_expression
@@ -349,18 +331,14 @@ parse_statement:
 
         call current_token_id
         cmp $6, %rax
-        movq $error_parse_missing_rparen, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_rparen
 
         # eat the '{'
         call next_token
 
         call current_token_id
         cmp $7, %rax
-        movq $error_parse_missing_lcurly, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_lcurly
 
         call parse_statement
         push %rax # id
@@ -371,9 +349,7 @@ parse_statement:
 
         call current_token_id
         cmp $8, %rax
-        movq $error_parse_missing_rcurly, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_rcurly
 
         # Construct the if statement
         pop %rcx
@@ -406,31 +382,23 @@ parse_statement:
 
         call peek_token_id
         cmp $5, %rax # '('
-        movq $error_parse_missing_lparen, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit # Parse error!
+        jne emit_parse_error_missing_lparen
         call next_token
         
         call peek_token_id
         cmp $6, %rax # ')'
-        movq $error_parse_missing_rparen, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit # Parse error!
+        jne emit_parse_error_missing_rparen
         call next_token
         
         call peek_token_id
         cmp $7, %rax # '{'
-        movq $error_parse_missing_lcurly, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit # Parse Error! Expected token: '{'
+        jne emit_parse_error_missing_lcurly
         call next_token 
 
         # Try to parse the statement
         call parse_statement
         cmp $0, %rax
-        movq $error_parse_missing_lcurly, %r15
-        cmovne %r15, %rdi
-        je emit_parse_error_exit # Parse Error. No Statement present
+        je emit_parse_error_missing_statement
         
         push %rax # Store
         push %rbx # Store
@@ -438,9 +406,7 @@ parse_statement:
         # Check '}'
         call peek_token_id
         cmp $8, %rax
-        movq $error_parse_missing_rcurly, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit # Parse error! Expected token: '}'
+        jne emit_parse_error_missing_rcurly
 
         # Remove the '}'
         call next_token
@@ -547,9 +513,7 @@ parse_statement:
 
         call current_token_id
         cmp $9, %rax
-        movq $error_parse_missing_lbracket, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_lbracket
 
         # current: '['
         # TODO! Add error handling here.
@@ -563,9 +527,7 @@ parse_statement:
 
         call current_token_id
         cmp $10, %rax
-        movq $error_parse_missing_rbracket, %r15
-        cmovne %r15, %rdi
-        jne emit_parse_error_exit
+        jne emit_parse_error_missing_rbracket
 
         # At this point, it be
         # * An array initialization 
@@ -593,10 +555,7 @@ parse_statement:
         
         call peek_token_id
         cmp $24, %rax
-        movq $error_parse_expected_identifier, %r15
-        cmovne %r15, %rdi
-
-        jne emit_parse_error_exit
+        jne emit_parse_error_expected_identifier
 
         call peek_token_data # The field
         movq 16(%rsp), %rdi
@@ -824,6 +783,12 @@ parse_expression:
             push %rbx
             # Consume the ')'
             call next_token
+
+            call current_token_id
+            cmp $6, %rax
+            jne emit_parse_error_missing_rparen
+            
+
             pop %rbx
             pop %rax
             leave
@@ -863,9 +828,7 @@ parse_expression:
 
             call current_token_id
             cmp $9, %rax
-            movq $error_parse_missing_lbracket, %r15
-            cmovne %r15, %rdi
-            jne emit_parse_error_exit
+            jne emit_parse_error_missing_lbracket
 
             call parse_expression
             push %rax
@@ -876,9 +839,7 @@ parse_expression:
 
             call current_token_id
             cmp $10, %rax
-            movq $error_parse_missing_rbracket, %r15
-            cmovne %r15, %rdi
-            jne emit_parse_error_exit
+            jne emit_parse_error_missing_rbracket
 
 
             call peek_token_id
@@ -930,27 +891,11 @@ parse_expression:
             leave
             ret
 
-// in  rdi: buffer
-// out rax: len in bytes
-.type count_string_len, @function
-count_string_len:
-        push %rbp
-        movq %rsp, %rbp
-        xor %rax, %rax
-    count_len:
-        inc %rax
-        movb (%rdi), %bl
-        inc %rdi
-        test %bl, %bl
-        jnz count_len
-        leave
-        ret
 
 // in rdi: error buffer
+.global emit_parse_error_exit
 .type emit_parse_error_exit, @function
 emit_parse_error_exit:
-        push %rbp
-        movq %rsp, %rbp
         push %rdi
         call count_string_len
         pop %rsi
