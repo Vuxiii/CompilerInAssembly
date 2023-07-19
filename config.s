@@ -85,6 +85,8 @@
         token_dot:        .asciz "."     # 37
 .global token_ampersand
         token_ampersand:  .asciz "&"     # 42
+.global token_deref
+        token_deref:      .asciz "~"     # 45
 
 .global number_0
         number_0:   .asciz "0" # value: 48

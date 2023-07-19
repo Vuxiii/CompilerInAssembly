@@ -14,7 +14,6 @@
     a. Add support for string literals Lexer
     b. Reading from std in
 3. Allocate memory
-4. Rewrite the parser for statements.
 
 ## Nice to have
 

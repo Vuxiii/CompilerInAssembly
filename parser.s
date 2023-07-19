@@ -105,10 +105,10 @@ parse_statement:
         # statement ::= 'identifier' '=' expression
         cmp $24, %rax
         je some_statement
-        cmp $15, %rax # '*' deref
+        cmp $45, %rax # '*' deref
         je deref_assignment_
         cmp $1, %rax
-        je function_statement_
+        je function_declaration_
         cmp $2, %rax
         je if_statement_
         cmp $12, %rax
@@ -178,14 +178,16 @@ parse_statement:
         push %rbx
         jmp check_statement_list
 
-    function_statement_:
-        call function_statement
+    function_declaration_:
+        call function_declaration
         push %rax
         push %rbx
         jmp check_statement_list
 
     deref_assignment_:
         movq $1, %rdi
+        call next_token
+        call next_token
         call assignment
         push %rax
         push %rbx
@@ -198,11 +200,15 @@ parse_statement:
         # current_token_id: identifier
         call peek_token_id
         cmp $5, %rax # We are dealing with a function call
-        #je function_call_
+        je function_call_
         jmp assignment_
     
-    #function_call_:
-        
+    function_call_:
+        // call function_call
+        push %rax # id
+        push %rbx # descriptor
+        jmp check_statement_list
+
 
     assignment_:
 
@@ -445,8 +451,8 @@ deref_assignment:
         ret
 // out rax: token id
 // out rbx: token descriptor
-.type function_statement, @function
-function_statement:
+.type function_declaration, @function
+function_declaration:
         push %rbp
         movq %rsp, %rbp
 
@@ -966,7 +972,7 @@ parse_expression:
             je parse_token_return_identifier
             cmp $42, %rax
             je parse_token_return_addressof
-            cmp $15, %rax
+            cmp $45, %rax
             je parse_token_return_deref
         # Case [1]
             # Consume the '('
@@ -1100,7 +1106,7 @@ parse_expression:
         parse_token_return_deref:
         # Case [8]
             call next_token
-            # current: '*'
+            # current: '~'
 
             call parse_expression
             movq %rax, %rdi

@@ -1,11 +1,15 @@
 def main() {
-    
-
-    print(a + 12341234)
+    a = 0
+    ptr = &a
+    ~ptr = 2
+    print(a)
+    print(~ptr)
 }
 
 EOP
 ptr = &a
+
+~ptr = a
 
     print(a)
     *ptr = 49
