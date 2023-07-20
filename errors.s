@@ -106,3 +106,17 @@ emit_not_implemented:
         
     movq $error_not_implemented, %rdi
     jmp emit_parse_error_exit
+
+.type emit_no_inputfile, @function
+.global emit_no_inputfile
+emit_no_inputfile:
+        
+    movq $error_no_inputfile, %rdi
+    jmp emit_parse_error_exit
+
+.type emit_file_not_found, @function
+.global emit_file_not_found
+emit_file_not_found:
+        
+    movq $error_file_not_found, %rdi
+    jmp emit_parse_error_exit

@@ -3,7 +3,7 @@
 .data
 
 .global filename
-        filename: .asciz "./in.a"
+        filename: .quad 0
 .global filesize
         filesize: .int 4096
 
@@ -285,4 +285,10 @@
 
 .global error_not_implemented
     error_not_implemented: .asciz "This feature is not yet implemented.\n"
+
+.global error_no_inputfile
+    error_no_inputfile: .asciz "No input file given.\n"
+
+.global error_file_not_found
+    error_file_not_found: .asciz "The given file was not found.\n"
 

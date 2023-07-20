@@ -25,18 +25,34 @@
 
 .section .text
 
+
+// in rdi: char *filename
+.global set_filename
+.type set_filename, @function
+set_filename:
+        push %rbp
+        movq %rsp, %rbp
+
+        movq %rdi, filename(%rip)
+
+        leave
+        ret
+
 // in rdi: file name to read
 // This function fills the buffer address
 .global read_file_contents
+.type read_file_contents, @function
 read_file_contents:
         push %rbp
         movq %rsp, %rbp
         # Open the file
         movq $2, %rax
-        movq $filename, %rdi
+        movq filename, %rdi
         movq $0, %rsi
         xorq %rdx, %rdx
         syscall
+        cmp $0, %rax
+        jle emit_file_not_found
         movq %rax, %r8       # Move the fd
         
         movq $9, %rax        # mmap

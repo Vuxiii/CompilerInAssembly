@@ -114,7 +114,7 @@ if_statement:    descriptor
     type: 31
     guard->type: token_id
     guard:       descriptor
-    body->type:  token_id
+    body->type:  token_idr
     body:        descriptor
 
 while_statement: descriptor

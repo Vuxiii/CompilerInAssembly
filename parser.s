@@ -188,9 +188,9 @@ parse_statement:
         jmp check_statement_list
 
     deref_assignment_:
+        call next_token
+        call next_token
         movq $1, %rdi
-        call next_token
-        call next_token
         call assignment
         push %rax
         push %rbx
@@ -373,9 +373,6 @@ assignment:
         call parse_expression
         push %rax
         push %rbx
-
-        cmp $25, %rax
-        jne emit_parse_error_expected_number
 
         call next_token
         # current: ']'
@@ -995,7 +992,7 @@ parse_expression:
     # [5]: 'identifier' '.' 'identifier'
     # [6]: 'identifier' '.' 'identifier' '[' expr ']'
     # [7]: '&' expr
-    # [8]: '*' expr
+    # [8]: '~' expr
             push %rbp
             mov %rsp, %rbp
             call peek_token_id

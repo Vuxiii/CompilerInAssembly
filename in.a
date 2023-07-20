@@ -3,11 +3,13 @@ def main() {
 }
 
 def run() {
-    a = 0
-    ptr = &a
-    ~ptr = 2
-    print(a)
-    print(~ptr)
+    array[10]
+    i = 0
+    while (i < 10) {
+        array[i] = 0
+        i = i + 1
+    }
+    print(i)
 }
 
 EOP
@@ -16,19 +18,9 @@ EOP
 STRUCTS
 
 def main() {
-    struct point { x, y }
-    struct point p1
-    struct point points = [50]
-    points[0].x = 42
-    points[0].y = 69
+    
 
-    array = [10]
-    i = 0
-    while (i < 10) {
-        array[i] = 0
-        i = i + 1
-    }
-    print(i)
+    
 }
 
 def main() {

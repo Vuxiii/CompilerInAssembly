@@ -31,7 +31,8 @@ errors.o: errors.s
 phony: clean run crun
 
 clean:
-	rm *.o main code.s code
+	rm *.o main code.s code tests/out/*.actual 2> /dev/null
+
 
 run:	
 	make -s && echo "\nDone Compiling the code!\nRunning the code:\n" && ./main
