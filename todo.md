@@ -19,9 +19,7 @@
     Parser . Extend the existing print
     Collect . Collect the string
     Emit . Paste string in target asm
-5. Test facility
-    a. Test Script
-6. Unit tests
+5. Unit tests
     a. Variables
     b. Structs
     c. Array

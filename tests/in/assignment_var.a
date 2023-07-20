@@ -1,0 +1,13 @@
+def main() {
+    a = 69
+    print(a)
+    a = 42
+    print(a)
+    b = 1
+    print(b)
+    b = a
+    print(a)
+    print(b)
+}
+
+EOP

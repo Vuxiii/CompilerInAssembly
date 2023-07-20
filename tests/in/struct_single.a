@@ -1,0 +1,16 @@
+def main() {
+
+    struct point {x}
+    struct point p
+    p.x = 0
+    print(p)
+    print(p.x)
+
+    p = 999
+    print(p)
+    print(p.x)
+
+    p.x = p
+    print(p)
+    print(p.x)
+} EOP

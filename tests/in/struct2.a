@@ -1,0 +1,25 @@
+def main() {
+    struct point {x, y}
+    struct point p1
+    struct point p2
+    p1.x = 69
+    p1.y = 42
+
+    p2.x = 0
+    p2.y = p1.x
+
+    print(p1.x)
+    print(p1.y)
+    print(p2.x)
+    print(p2.y)
+
+    p2.x = p1.y
+    print(p2.x)
+    p1.x = p1.x
+    print(p1.x)
+
+    p1 = 0
+    print(p1.y)
+}
+
+EOP

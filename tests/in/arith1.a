@@ -1,0 +1,30 @@
+def main() {
+    a = 0
+    print(a)
+
+    a = a + 10
+    print(a)
+    a = a * 2
+    print(a)
+    a = a + a
+    print(a)
+
+    b = 69
+    print( a + b )
+    tmp = b
+    print(tmp)
+
+    b = ((a + b) * 0)
+    print(b)
+    
+    b = tmp
+    
+    b = (a + b) * 0
+    print(b)
+    
+    b = tmp
+    
+    b = 0 * (a + b)
+    print(b)
+
+} EOP

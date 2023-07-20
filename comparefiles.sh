@@ -1,16 +1,15 @@
 #!/bin/bash
 file_actual="$1.actual"
 file_expected="$1.expected"
+file_name=$(basename "$1")
 
-
-diff_output=$(diff -u "$file_actual" "$file_expected")
-
+diff_output=$(colordiff -u "$file_actual" "$file_expected")
 if ! [ -z "$diff_output" ]; then
-    echo -e "\033[1;31m\t[Failed]\033[0m"
+    printf " - %-30s \033[1;31m[Failed]\033[0m\n" "$file_name"
     echo ""
     echo "Differences:"
     echo "$diff_output"
     echo ""
 else
-    echo -e "\033[1;32m\t[OK]\033[0m"
+    printf " - %-30s \033[1;32m[Passed]\033[0m\n" "$file_name"
 fi

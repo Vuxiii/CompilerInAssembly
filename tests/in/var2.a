@@ -1,6 +1,8 @@
 def main() {
     a = 42
+    b = 69
     print(a)
+    print(b)
 }
 
 EOP

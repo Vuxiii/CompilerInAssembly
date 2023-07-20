@@ -1,15 +1,14 @@
 def main() {
-    run()
-}
+    
+    print(1 + 1 * 0)
+    print(1 + (1 * 0))
+    print((1 + 1) * 0)
 
-def run() {
-    array[10]
-    i = 0
-    while (i < 10) {
-        array[i] = 0
-        i = i + 1
-    }
-    print(i)
+    print(0 * 1 + 1)
+    print( (0 * 1) + 1)
+    print(0 * (1 + 2))
+    print(0 * (1 + 2))
+
 }
 
 EOP

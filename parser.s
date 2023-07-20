@@ -27,37 +27,37 @@ _peek_data_:                    .int 0
 
 
 .global function_call_buffer
-        function_call_buffer:    .space 256
+        function_call_buffer:    .space 1024
 .global deref_buffer
-        deref_buffer:            .space 256
+        deref_buffer:            .space 1024
 .global addressof_buffer
-        addressof_buffer:        .space 256
+        addressof_buffer:        .space 1024
 .global array_assignment_buffer
-        array_assignment_buffer: .space 256
+        array_assignment_buffer: .space 1024
 .global array_access_buffer
-        array_access_buffer:     .space 256
+        array_access_buffer:     .space 1024
 .global print_statement_buffer
-        print_statement_buffer:  .space 256
+        print_statement_buffer:  .space 1024
 .global struct_instance_buffer
-        struct_instance_buffer: .space 256
+        struct_instance_buffer: .space 1024
 .global struct_type_buffer
-        struct_type_buffer:     .space 256
+        struct_type_buffer:     .space 1024
 .global struct_buffer 
-        struct_buffer:          .space 256
+        struct_buffer:          .space 1024
 .global field_access_buffer
-        field_access_buffer:    .space 256
+        field_access_buffer:    .space 1024
 .global function_buffer
-        function_buffer:        .space 256
+        function_buffer:        .space 1024
 .global if_buffer
-        if_buffer:              .space 256
+        if_buffer:              .space 1024
 .global while_buffer
-        while_buffer:           .space 256
+        while_buffer:           .space 1024
 .global statement_list_buffer
-        statement_list_buffer:  .space 256
+        statement_list_buffer:  .space 1024
 .global assignment_buffer
-        assignment_buffer:      .space 256
+        assignment_buffer:      .space 1024
 .global binary_op_buffer
-        binary_op_buffer:       .space 256
+        binary_op_buffer:       .space 1024
 
 field_access_offset:            .int 0
 binary_op_offset:               .int 0
