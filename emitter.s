@@ -729,6 +729,10 @@ visit_expression:
         je insert_greater
         cmp $27, %rdx
         je insert_noteq
+        cmp $22, %rdx
+        je insert_and
+        cmp $23, %rdx
+        je insert_or
         leave
         ret
 
@@ -830,6 +834,29 @@ visit_expression:
         call insert_comparison_prologue
         call emit_cmovg
         call insert_comparison_epilogue
+        leave
+        ret
+    insert_and:
+        call emit_and
+        call emit_rax
+        call emit_comma
+        call emit_rbx
+        
+        call emit_push
+        call emit_rbx
+
+        leave
+        ret
+    insert_or:
+        
+        call emit_or
+        call emit_rax
+        call emit_comma
+        call emit_rbx
+        
+        call emit_push
+        call emit_rbx
+        
         leave
         ret
     insert_comparison_prologue:
@@ -1364,6 +1391,28 @@ emit_neg:
         movq $1, %rax
         movq $1, %rdi
         leaq _emit_neg, %rsi
+        movq $6, %rdx
+        syscall
+        leave
+        ret
+.type emit_and, @function
+emit_and:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_and, %rsi
+        movq $7, %rdx
+        syscall
+        leave
+        ret
+.type emit_or, @function
+emit_or:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_or, %rsi
         movq $6, %rdx
         syscall
         leave

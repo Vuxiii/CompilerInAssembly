@@ -1,8 +1,6 @@
 def main(n) {
-    
-    a = 10
-    fib(1+4, a * 0)
-    
+    bool = 1 == 1 && 1 != 1 || 2 == 2
+    print(bool)
 } EOP
 
 def fib( n ) {

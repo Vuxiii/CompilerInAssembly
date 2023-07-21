@@ -923,43 +923,83 @@ parse_expression:
         push %rbp
         mov %rsp, %rbp
 
-        # Check if we are dealing with a number
-
         # We can have:
-        # [1]: parse_sum
-        # [2]: parse_func_call
-        call parse_sum
+        # [1]: expr
+        # [2]: expr && expr
+        # [3]: expr || expr
+
+        call parse_sub_expression
         push %rax
         push %rbx
-        # Check for '==', '<', '>'
+    check_and_or:
         call peek_token_id
-        cmp $3, %rax
-        je parse_create_binop # equals
-        cmp $17, %rax
-        je parse_create_binop # less
-        cmp $18, %rax
-        je parse_create_binop # greater
-        cmp $27, %rax
-        je parse_create_binop # noteq
+        cmp $22, %rax
+        je parse_create_and # Case [3]
+        cmp $23, %rax
+        je parse_create_or # Case [2]
+    # Case [1]
         pop %rbx
         pop %rax
         leave
         ret
-    parse_create_binop:
+    
+    parse_create_and:
+    parse_create_or:
         push %rax
         call next_token
-        call parse_sum
+        call parse_sub_expression
         movq %rax, %rdi
         movq %rbx, %rsi
         pop %rdx
         pop %r8
         pop %rcx
         call construct_binary_op_node
-        movq %rax, %rbx
-        movq $26, %rax
-        leave
-        ret
+        push $26
+        push %rax
+        jmp check_and_or
+    .type parse_sub_expression, @function
+    parse_sub_expression:
+            push %rbp
+            mov %rsp, %rbp
 
+            # We can have:
+            # [1]: expr
+            # [2]: expr == expr
+            # [3]: expr != expr
+            # [4]: expr <  expr
+            # [5]: expr >  expr
+            call parse_sum
+            push %rax
+            push %rbx
+            # Check for '==', '<', '>'
+            call peek_token_id
+            cmp $3, %rax
+            je parse_create_binop # Case [2]
+            cmp $27, %rax
+            je parse_create_binop # Case [3]
+            cmp $17, %rax
+            je parse_create_binop # Case [4]
+            cmp $18, %rax
+            je parse_create_binop # Case [5]
+        # Case [1]
+            pop %rbx
+            pop %rax
+            leave
+            ret
+        parse_create_binop:
+            push %rax
+            call next_token
+            call parse_sum
+            movq %rax, %rdi
+            movq %rbx, %rsi
+            pop %rdx
+            pop %r8
+            pop %rcx
+            call construct_binary_op_node
+            movq %rax, %rbx
+            movq $26, %rax
+            leave
+            ret
     .type parse_sum, @function
     parse_sum:
             # We can have:

@@ -149,6 +149,10 @@
         _emit_cmp: .asciz "\n\tcmp "
 .global _emit_neg
         _emit_neg: .asciz "\n\tneg "
+.global _emit_and
+        _emit_and: .asciz "\n\tandq "
+.global _emit_or
+        _emit_or: .asciz "\n\torq "
 
 # --[ Operands ]--
 .global _emit_rax
