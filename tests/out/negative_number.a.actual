@@ -1,7 +1,0 @@
-code.s: Assembler messages:
-code.s:1: Error: no such instruction: `missing a 41token.'
-code.s:2: Error: no such instruction: `current ID 11'
-code.s:3: Error: no such instruction: `current DATA 0'
-code.s:4: Error: no such instruction: `peek ID 5'
-code.s:5: Error: no such instruction: `peek DATA 0'
-ld: error: cannot open code.o: No such file or directory
