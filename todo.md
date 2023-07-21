@@ -14,6 +14,8 @@
     a. Add support for string literals Lexer
     b. Reading from std in
 3. Allocate memory
+    a. For bigger allocations use mmap
+    b. For smaller allocations < 4096 use brk
 4. String printing
     Lexer . '"'
     Parser . Extend the existing print

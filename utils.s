@@ -1,4 +1,4 @@
-.data
+.section .data
 
 .extern number_tokens
 .extern identifier_tokens
@@ -204,3 +204,39 @@ loop_read:
     movq %r8, %rdx
     syscall
     ret
+
+.global emit_storage_error_unknown_id___
+.type emit_storage_error_unknown_id___, @function
+emit_storage_error_unknown_id___:
+        // push %rbp
+        // mov %rsp, %rbp 
+        push %rdi
+
+        call emit_newline
+        call emit_newline
+
+        movq $error_storage_error, %rdi
+        call count_string_len
+
+        movq %rax, %rdx
+        movq $1, %rdi
+        movq $error_storage_error, %rsi
+        movq $1, %rax
+        syscall
+
+        
+        
+        movq (%rsp), %rdi
+        call count_string_len
+        movq %rax, %rdx
+        pop %rsi
+
+        movq $1, %rdi
+        movq $1, %rax
+        syscall
+        call emit_newline
+        call emit_newline
+
+        movq $60, %rax
+        movq $-1, %rdi
+        syscall

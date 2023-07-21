@@ -507,22 +507,15 @@ visit_expression:
         push $696969 # expr id
         call retrieve_deref
 
-        movq (%rsp), %rdi
-        cmp $24, %rdi # Must be an lvalue
-        jne emit_unexpected_expr_expected_lvalue
-
-        call emit_mov
-
-        pop %rsi
         pop %rdi
-        call emit_var
-        call emit_comma
+        pop %rsi
+        call visit_expression
+        call emit_pop
         call emit_rax
         call emit_push
         call emit_lparen
         call emit_rax
         call emit_rparen
-
         leave
         ret
     addressof:
@@ -533,20 +526,114 @@ visit_expression:
 
         movq (%rsp), %rdi
         cmp $24, %rdi # Must be an lvalue
-        jne emit_unexpected_expr_expected_lvalue
+        je addressof_identifier
+        cmp $41, %rdi
+        je addressof_array_access
+        cmp $36, %rdi
+        je addressof_field_access
+        jmp emit_unexpected_expr_expected_lvalue
+        addressof_identifier:
+            call emit_lea
 
-        call emit_lea
+            pop %rsi
+            pop %rdi
+            call emit_var
+            call emit_comma
+            call emit_rax
+            call emit_push
+            call emit_rax
 
-        pop %rsi
-        pop %rdi
-        call emit_var
-        call emit_comma
-        call emit_rax
-        call emit_push
-        call emit_rax
+            leave
+            ret
+        addressof_field_access:
+            jmp emit_not_implemented
+            leave
+            ret
+        addressof_array_access:
+            # We need to evaluate the index.
+            # For now, just evaluate it at runtime
+            # Check for compiletime evaluation later
 
-        leave
-        ret
+            # New idea for loading array accesses
+            # Compute the address of the array_index
+            
+            # lea base_address, rax
+            # add offset, rax
+
+            movq 8(%rsp), %rdi
+            # rdi is array access
+            push $696969 # index descriptor
+            push $696969 # index id
+            push $696969 # identifier descriptor
+            push $696969 # identifier id
+            call retrieve_array_access
+
+            # Find the base address of identifier
+            movq  (%rsp), %rsi
+            movq 8(%rsp), %rdi
+            call get_offset_on_stack
+            movq $8, %rdx
+            imulq %rdx
+            push %rax
+
+            call emit_lea
+            call emit_minus
+            pop %rdi
+            call emit_number
+            call emit_lparen
+            call emit_rbp
+            call emit_rparen
+            call emit_comma
+            call emit_rax
+
+            call emit_push
+            call emit_rax
+            # Base address is on top of the stack
+
+            # Eval the index
+
+            movq 16(%rsp), %rdi
+            movq 24(%rsp), %rsi
+            call visit_expression
+
+            # index is on top of the stack
+            # multiply it by the stride
+            movq  (%rsp), %rdi
+            movq 8(%rsp), %rsi
+            call retrieve_stride_from_identifier
+
+            push %rax # Stride in bytes
+
+            call emit_pop
+            call emit_rax
+            call emit_mov
+            call emit_dollar
+            pop %rdi
+            call emit_number
+            call emit_comma 
+            call emit_rdx
+            call emit_mul
+            call emit_rdx
+            call emit_push
+            call emit_rax
+
+            # Relative offset on top of stack
+            # Load the base offset
+            call emit_pop
+            call emit_rbx # Relative offset
+            call emit_pop
+            call emit_rax # Base offset
+
+            call emit_add
+            call emit_rbx
+            call emit_comma
+            call emit_rax
+            
+            call emit_push
+            call emit_rax # Store the address
+
+            leave
+            ret
     array_access:
         push %rsi
         

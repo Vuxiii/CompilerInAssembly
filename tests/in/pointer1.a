@@ -1,0 +1,9 @@
+def main() {
+    
+    x = 1
+    y = 2
+
+    ptr = &x
+    print(~ptr)
+    print(~ptr-8)
+} EOP

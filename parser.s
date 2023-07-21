@@ -666,8 +666,8 @@ struct_statement:
         movq %rsp, %rbp
         # We need to determine if this is a struct declaration or an assignment
         # We do this by checking for the number og identifiers token
-        # [1]: A single identifier -> assign
-        # [2]: Two identifiers -> decl
+        # [1]: A single identifier -> declaration
+        # [2]: Two identifiers -> instance
 
         # eat the struct
         call next_token
@@ -761,9 +761,23 @@ struct_statement:
         leave
         ret
     struct_instance_array:
-        
+        call next_token
+        # Current: '['
+
+        call current_token_id
+        cmp $9, %rax
+        jne emit_parse_error_missing_lbracket
+
+
         call parse_expression
         push %rbx # The number of elements. MUST be number
+
+        call next_token
+        # Current: ']'
+
+        call current_token_id
+        cmp $10, %rax
+        jne emit_parse_error_missing_rbracket
 
         # We need to find he stride and the count
         movq 24(%rsp), %rdi
@@ -1901,6 +1915,47 @@ retrieve_array_assignment:
         mov %edx, 32(%rbp)
         mov %ecx, 40(%rbp)
 
+        leave
+        ret
+
+// in  rdi: token descriptor
+// in  rsi: token id
+// out rax: stride in bytes
+.type retrieve_stride_from_identifier, @function
+.global retrieve_stride_from_identifier
+retrieve_stride_from_identifier:
+        push %rbp
+        movq %rsp, %rbp
+
+        lea array_assignment_buffer(%rip), %rax
+
+        movl (%rax), %ebx
+        cmp $38, %ebx # Structc instance
+        je retrieve_stride_from_struct
+        cmp $24, %ebx # variable
+        je retrieve_stride_from_ident
+        movq $error_array_assignment_, %rdi
+        jmp emit_storage_error_unknown_id___
+    retrieve_stride_from_struct:
+        # get the cont
+        movq %rsi, %rdi
+        push $696969 # identifier descriptor
+        push $696969 # struct descriptor
+        call retrieve_struct_instance
+        pop %rsi
+        addq $8, %rsp
+        push $696969 # field descriptors
+        push $696969 # field count
+        push $696969 # struct name
+        call retrieve_struct_decl
+        addq $8, %rsp
+        pop %rax
+        movq $8, %rdx
+        imulq %rdx
+        leave
+        ret
+    retrieve_stride_from_ident:
+        movq $8, %rax
         leave
         ret
 

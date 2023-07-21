@@ -292,3 +292,9 @@
 .global error_file_not_found
     error_file_not_found: .asciz "The given file was not found.\n"
 
+.global error_array_assignment_
+    error_array_assignment_: .asciz "Array Assignment Buffer"
+
+.global error_storage_error
+    error_storage_error: .asciz "Error in the datastructure for: "
+
