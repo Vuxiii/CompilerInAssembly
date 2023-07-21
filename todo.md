@@ -44,19 +44,3 @@ Give the language access to the compiler.
 This enables the user to modify how the language works.
 Also enables selfhosting the compiler in the language while still
 using the prebuilt assembly functions.
-
-## Since last time
-
-* Reading from file
-    mmap
-* structs
-    Declarations
-    Initialization
-* Arrays
-    ints
-    structs
-* Pointer
-    Address of
-    Deref
-* Function call
-    With ZERO arguments

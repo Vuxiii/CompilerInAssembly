@@ -68,6 +68,7 @@ visit_function:
         push $696969
         push $696969
         push $696969
+        push $696969
         call retrieve_function
 
         addq $8, %rsp # Remove Function identifier

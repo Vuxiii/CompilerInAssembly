@@ -28,6 +28,10 @@ _peek_data_:                    .int 0
 
 .global function_call_buffer
         function_call_buffer:    .space 1024
+.global arg_buffer
+        arg_buffer:              .space 1024
+.global arg_list_buffer
+        arg_list_buffer:         .space 1024
 .global deref_buffer
         deref_buffer:            .space 1024
 .global addressof_buffer
@@ -74,6 +78,8 @@ array_assignment_offset:        .int 0
 addressof_offset:               .int 0
 deref_offset:                   .int 0
 function_call_offset:           .int 0
+arg_offset:                     .int 0
+arg_list_offset:                .int 1 # For functions with no args
 
 .global function_offset
         function_offset:        .int 0
@@ -231,22 +237,54 @@ function_call:
         # Save the name
         call current_token_data
         push %rax
-
+        push $0 # Assume no arg list as default
         call next_token
         # Current: '('
         call current_token_id
         cmp $5, %rax
         jne emit_parse_error_missing_lparen
-
-        # Insert arg_list here
-
+        
+        
+        
+        xor %r15, %r15 # Counter of how many arguments
+        xor %r14, %r14 # Counter of how many arguments
+        
+        call peek_token_id
+        cmp $6, %rax
+        je funciton_call_skip_args
+        jmp collect_arg_loop
+    collect_arg_loop_consume_comma:
         call next_token
-        # Current: ')'
-        call current_token_id
+        # Current: ','
+    collect_arg_loop:
+        call parse_expression
+        movq %rax, %rdi
+        movq %rbx, %rsi
+        call construct_arg
+        push %rax
+        inc %r15
+        addq $8, %r14
+        call peek_token_id
+        cmp $35, %rax
+        je collect_arg_loop_consume_comma
+
+        # Construct the arg list
+        leaq (%rsp), %rsi
+        addq %r14, %rsi
+        subq $8, %rsi
+        movq %r15, %rdi
+        call construct_arg_list
+        addq %r14, %rsp
+        movq %rax, (%rsp) # Override the arglist descriptor
+    funciton_call_skip_args:
+        
+        call peek_token_id
         cmp $6, %rax
         jne emit_parse_error_missing_rparen
-
-        movq $0, %rsi
+        
+        call next_token
+        # Current: ')'
+        pop %rsi
         pop %rdi
         call construct_function_call
         movq %rax, %rbx
@@ -501,12 +539,48 @@ function_declaration:
         # Store the identifier descriptor
         call current_token_data
         push %rax # Store identifier
-
+        push $0   # Zero arguments as default
         call peek_token_id
         cmp $5, %rax # '('
         jne emit_parse_error_missing_lparen
         call next_token
-        
+
+        xor %r15, %r15 # Counter of how many arguments
+        xor %r14, %r14 # Counter of how many arguments
+
+        call peek_token_id
+        cmp $6, %rax
+        je function_skip_args
+        jmp collect_param_loop
+    collect_param_loop_consume_comma:
+        call next_token
+        # Current: ','
+    collect_param_loop:
+        call next_token
+        # Current: token descriptor
+        call current_token_id
+        movq %rax, %rdi
+        call current_token_data
+        movq %rax, %rsi
+        call construct_arg
+        push %rax
+        inc %r15
+        addq $8, %r14
+        call peek_token_id
+        cmp $35, %rax
+        je collect_param_loop_consume_comma
+
+        # Construct the arg list
+        leaq (%rsp), %rsi
+        addq %r14, %rsi
+        subq $8, %rsi
+        movq %r15, %rdi
+        call construct_arg_list
+        addq %r14, %rsp # Remvoe the args from the stack
+
+        movq %rax, (%rsp) # Override the arglist descriptor
+
+    function_skip_args:
         call peek_token_id
         cmp $6, %rax # ')'
         jne emit_parse_error_missing_rparen
@@ -537,6 +611,7 @@ function_declaration:
 
         pop %rdx # body descriptor
         pop %rsi # body id
+        pop %rcx # arglist descriptor
         pop %rdi # identifier descriptor
         call construct_function_node
         movq %rax, %rbx
@@ -1222,6 +1297,76 @@ emit_parse_error_exit:
         movq $1, %rdi
         syscall
 
+
+// in rdi: count
+// in rsi: arg descriptor[]
+// out rax: token descriptor
+.global construct_arg_list
+.type construct_arg_list, @function
+construct_arg_list:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov arg_list_offset(%rip), %eax
+        push %rax
+        
+        movq $4, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea arg_list_buffer(%rip), %rax
+        mov %edi, (%rax, %rbx)
+        xor %rdx, %rdx
+    arg_list_insert_begin:
+        movq (%rsi), %rcx
+        movl %ecx, 4(%rax, %rbx)
+        subq $8, %rsi # We are going backwards to achieve correct ordering later.
+        addq $4, %rax
+        inc %rdx
+        cmp %rdx, %rdi
+        jne arg_list_insert_begin
+
+        pop %rax
+        movq %rax, %rbx
+        add %edi, %ebx
+        # Store next available descriptor 
+        mov %ebx, (arg_list_offset)(%rip)
+        
+
+        leave
+        ret
+    
+// in rdi: identifier id
+// in rsi: identifier descriptor
+// out rax: token descriptor
+.global construct_arg
+.type construct_arg, @function
+construct_arg:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov arg_offset(%rip), %eax
+        push %rax
+        
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea arg_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+
+        pop %rax
+        movq %rax, %rbx
+        inc %ebx
+        # Store next available descriptor 
+        mov %ebx, (arg_offset)(%rip)
+        
+
+        leave
+        ret
+
+
 // in rdi: identifier descriptor
 // in rsi: arglist descriptor
 // out rax: token descriptor
@@ -1680,6 +1825,7 @@ construct_binary_op_node:
 // in rdi: identifier
 // in rsi: body id
 // in rdx: body descriptor
+// in rcx: arg list
 // out:    function descriptor
 .type construct_function_node, @function
 construct_function_node:
@@ -1691,11 +1837,11 @@ construct_function_node:
         push %rax # Store so we can return the descriptor
         # Ensure that we are offset by the correct size of each struct -> ebx * sizeof(binaryop) -> ebx * 20 bytes
         push %rdx # mulq uses rdx...
-        movq $20, %rdx
+        movq $24, %rdx
         mulq %rdx
         mov %rax, %rbx
         pop %rdx
-    // p (int[5])*0x202fee
+
         lea function_buffer(%rip), %rax
         
         mov %edi,   (%rax, %rbx)
@@ -1703,7 +1849,8 @@ construct_function_node:
         mov %edx,  8(%rax, %rbx)
         movl $0,  12(%rax, %rbx)
         movl $0,  16(%rax, %rbx)
-        
+        mov %ecx, 20(%rax, %rbx)
+
         pop %rax # Restore descriptor
         movq %rax, %rbx
         inc %ebx
@@ -1781,6 +1928,60 @@ construct_while_node:
 
         leave
         ret
+
+
+
+
+// in rdi: Token descriptor
+// out 16(%rbp): Count
+// out 24(%rbp): Arg Descriptor*
+.global retrieve_arg_list
+.type retrieve_arg_list, @function
+retrieve_arg_list:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov %rdi, %rax
+        movq $4, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea arg_list_buffer(%rip), %rax
+        addq %rbx, %rax
+        mov   (%rax), %edi
+        leaq 4(%rax), %rsi
+        
+        mov %edi, 16(%rbp)
+        mov %rsi, 24(%rbp)
+
+        leave
+        ret
+
+// in rdi: Token descriptor
+// out 16(%rbp): identifier id
+// out 24(%rbp): identifier descriptor
+.global retrieve_arg
+.type retrieve_arg, @function
+retrieve_arg:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov %rdi, %rax
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea arg_buffer(%rip), %rax
+        
+        mov   (%rax, %rbx), %edi
+        mov  4(%rax, %rbx), %esi
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+
+        leave
+        ret
+
 
 // in rdi: Token descriptor
 // out 16(%rbp): identifier descriptor
@@ -2051,13 +2252,14 @@ retrieve_binary_op:
 // out 32(%rbp): body descriptor
 // out 40(%rbp): variable count int
 // out 48(%rbp): symbol table descriptor
+// out 54(%rbp): arg list descriptor
 .type retrieve_function, @function
 .global retrieve_function
 retrieve_function:
         push %rbp
         mov %rsp, %rbp 
         mov %rdi, %rax
-        movq $20, %rdx
+        movq $24, %rdx
         mulq %rdx
         mov %rax, %rbx
 
@@ -2068,12 +2270,14 @@ retrieve_function:
         mov  8(%rax, %rbx), %edx # body descriptor
         mov 12(%rax, %rbx), %ecx # variable count int
         mov 16(%rax, %rbx), %r8d # symbol table descriptor
+        mov 20(%rax, %rbx), %r9d # arg list descriptor
         
         mov %edi, 16(%rbp)
         mov %esi, 24(%rbp)
         mov %edx, 32(%rbp)
         mov %ecx, 40(%rbp)
         mov %r8d, 48(%rbp)
+        mov %r9d, 54(%rbp)
 
         leave
         ret

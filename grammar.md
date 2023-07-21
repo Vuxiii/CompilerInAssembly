@@ -109,6 +109,7 @@ function:        descriptor
     body:        descriptor
     var_count:   int
     symbol_table:descriptor
+    arg_list:    descriptor
 
 if_statement:    descriptor
     type: 31
@@ -178,6 +179,22 @@ function_call: size = 8
     ident->desc: descriptor
     arglist:     descriptor
 
+arg: size = 8
+    type: 47
+    ident->type: token_id
+    ident->desc: descriptor
+
+arg_list: size = 4 + count * 4
+    type: 48
+    count:       int
+    args:        descriptor[]
+
+arg_list: size = 4 + count * 8
+    [(count, args[] ),...]
+
+arg: size = 8
+    [(ident_type, ident_descriptor),...]
+
 function_call_buffer: size = 8
     [(ident_descriptor, arglist_descriptor),...]
 
@@ -211,8 +228,8 @@ while_buffer: size = 16
 if_buffer: size = 16
     [(guard_id, guard_descriptor, body_id, body_descriptor),...]
 
-function_buffer: size = 20
-    [(identifier, body_id, body_descriptor, var_count, symbol_table),...]
+function_buffer: size = 24
+    [(identifier, body_id, body_descriptor, var_count, symbol_table, arg_list),...]
 
 statement_list_buffer: size = 16
     [(lhs_id, lhs_descriptor, rhs_id, rhs_descriptor),...]

@@ -115,6 +115,46 @@ visit_statement:
         push $696969 # identifier descriptor
         call retrieve_function_call
 
+        movq 8(%rsp), %rdi
+        cmp $0, %rdi
+        je function_skip_args
+
+        push $696969 # Arg descriptor *
+        push $696969 # Count
+        call retrieve_arg_list
+        pop %rcx # Count
+        pop %rsi # Descriptor *
+        
+        push %rbp
+        movq %rsp, %rbp
+        subq $16, %rsp
+        movq %rcx,  -8(%rbp) # Count
+        movq %rsi, -16(%rbp) # Descriptor *
+    function_visit_arg_begin:
+        
+        
+        movq -16(%rbp), %rsi    # Load arg_list *
+        movl (%rsi), %edi       # Arg descriptor
+        addq $4, %rsi           # Go to next arg
+        movq %rsi, -16(%rbp)    # Save arg_list *
+        
+        push $696969 # token descriptor
+        push $696969 # token id
+        call retrieve_arg
+        
+        pop %rdi
+        pop %rsi
+        call visit_expression
+
+        movq -8(%rbp), %rcx # Count
+        dec %rcx
+        movq %rcx,  -8(%rbp) # Count
+        cmp $0, %rcx
+        jne function_visit_arg_begin
+        
+        leave
+
+    function_skip_args:
         call emit_call
 
         pop %rdi
@@ -258,11 +298,12 @@ visit_statement:
     visit_function:
         movq %rsi, %rdi
         call set_current_function
-        push $696969
-        push $696969
-        push $696969
-        push $696969
-        push $696969
+        push $696969 # Arg list descriptor
+        push $696969 # Symbol Table Descriptor
+        push $696969 # Variable Count
+        push $696969 # Body Descriptor
+        push $696969 # Body id
+        push $696969 # Identifier
         call retrieve_function
 
         call emit_newline
@@ -276,12 +317,14 @@ visit_statement:
         call emit_sub
         call emit_dollar
 
-        pop %rsi # body id
-        pop %rdx # body descriptor
-        pop %rax # var count
-        push %rdx
-        push %rsi
-
+        movq 40(%rsp), %rbx
+        push $696969 # Arg descriptor*
+        push $696969 # Count
+        call retrieve_arg_list
+        pop %rbx # Parameter Count
+        addq $8, %rsp # Remove the arg descriptor *
+        movq 16(%rsp), %rax # var count
+        
         movq $8, %rdx
         imulq %rdx
         movq %rax, %rdi
@@ -290,13 +333,8 @@ visit_statement:
         call emit_rsp
         
         
+        pop %rdi
         pop %rsi
-        pop %rdx
-        pop %r8  # symbol_table offset
-        
-
-        movq %rsi, %rdi
-        movq %rdx, %rsi
         call visit_statement
         
         call emit_function_epilogue
