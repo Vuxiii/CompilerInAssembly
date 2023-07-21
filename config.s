@@ -270,6 +270,11 @@
         error_parse_missing_statement: .asciz "No statement present.\n"
 .global error_parse_expected_identifier
         error_parse_expected_identifier: .asciz "Expected an identifier.\n"
+.global error_parse_unexpected_identifier
+        error_parse_unexpected_identifier: .asciz "Unexpected identifier.\n"
+
+
+
 .global error_parse_expected_number
         error_parse_expected_number: .asciz "Expected a number.\n"
 .global error_missing_main_function
@@ -296,5 +301,5 @@
     error_array_assignment_: .asciz "Array Assignment Buffer"
 
 .global error_storage_error
-    error_storage_error: .asciz "Error in the datastructure for: "
+error_storage_error: .asciz "Error in the datastructure for: "
 

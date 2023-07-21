@@ -72,6 +72,16 @@ emit_parse_error_expected_identifier:
     movq $error_parse_expected_identifier, %rdi
     jmp emit_parse_error_exit
 
+
+.type emit_parse_error_unexpected_identifier, @function
+.global emit_parse_error_unexpected_identifier
+emit_parse_error_unexpected_identifier:
+        
+    movq $error_parse_unexpected_identifier, %rdi
+    jmp emit_parse_error_exit
+
+
+
 .type emit_parse_error_expected_number, @function
 .global emit_parse_error_expected_number
 emit_parse_error_expected_number:

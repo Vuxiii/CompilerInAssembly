@@ -4,8 +4,7 @@
 
 1. Parser
     a. Function Calls
-        i.  Arglist
-        ii. Call functions with arguments
+        1. Differentiate between arguments and local variables.
     b. String literals
     c. String printing
     d. Ensure that all the binary operators are implemented

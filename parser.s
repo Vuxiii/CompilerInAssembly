@@ -560,6 +560,8 @@ function_declaration:
         # Current: token descriptor
         call current_token_id
         movq %rax, %rdi
+        cmp $24, %rdi
+        jne emit_parse_error_unexpected_identifier
         call current_token_data
         movq %rax, %rsi
         call construct_arg
