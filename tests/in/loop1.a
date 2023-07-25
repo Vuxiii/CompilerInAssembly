@@ -1,0 +1,11 @@
+def main() {
+    i = 0
+    loop 10+2 {
+        i = i + 1
+        print(i)
+    }
+    while i > 3 {
+        print(i)
+        i = i - 2
+    }
+} EOP

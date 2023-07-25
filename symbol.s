@@ -69,6 +69,7 @@ visit_function:
         push $696969
         push $696969
         push $696969
+        push $696969
         call retrieve_function
 
         addq $8, %rsp # Remove Function identifier
@@ -101,6 +102,8 @@ symbol_check_statement_kind:
         je symbol_check_call_struct_instance
         cmp $40, %rdi
         je symbol_check_call_array_assignment
+        cmp $49, %rdi
+        je symbol_check_call_loop
 
         # Found nothing. Return...
         jmp symbol_check_statement_kind_end
@@ -125,7 +128,28 @@ symbol_check_statement_kind:
     symbol_check_call_array_assignment:
         call symbol_array_assignment
         jmp symbol_check_statement_kind_end
+    symbol_check_call_loop:
+        call symbol_loop
+        jmp symbol_check_statement_kind_end
     symbol_check_statement_kind_end:
+        leave
+        ret
+
+.type symbol_loop, @function
+symbol_loop:
+        enter $0, $0
+        push $696969
+        push $696969
+        push $696969
+        push $696969
+        movq %rsi, %rdi
+        call retrieve_loop
+        addq $16, %rsp # remove the guard
+        
+        pop %rdi
+        pop %rsi
+        # Check for which statement the body is.
+        call symbol_check_statement_kind
         leave
         ret
 
@@ -496,7 +520,7 @@ get_symbol_table:
 
         xor %rax, %rax
         movl _current_function(%rip), %eax
-        movq $20, %rdx
+        movq $32, %rdx
         mulq %rdx
         mov %rax, %rbx # Offset
         lea function_buffer(%rip), %rax
@@ -516,7 +540,7 @@ set_symbol_table:
         mov %rsp, %rbp
         xor %rax, %rax
         movl %edi, %eax
-        movq $20, %rdx
+        movq $32, %rdx
         mulq %rdx
         mov %rax, %rbx # Offset
         lea function_buffer(%rip), %rax
@@ -533,7 +557,7 @@ set_symbol_count:
         movq %rsp, %rbp
         xor %rax, %rax
         movl %edi, %eax
-        movq $20, %rdx
+        movq $32, %rdx
         mulq %rdx
         mov %rax, %rbx # Offset
         call get_symbol_count

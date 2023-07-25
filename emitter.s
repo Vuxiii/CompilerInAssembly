@@ -195,10 +195,43 @@ visit_statement:
         leave
 
     function_skip_args:
+        # Check for the return type
+        pop %rdi
+        call retrieve_identifier
+        movq %rax, %rdi
+        call find_function_by_charptr
+        movq %rax, %rdi
+        push $696969 # return type descriptor
+        push $696969 # arg list
+        push $696969 # symbol table
+        push $696969 # var vound
+        push $696969 # body descriptor
+        push $696969 # body id
+        push $696969 # identifier
+        call retrieve_function
+        pop %rsi # Identifier
+        addq $40, %rsp
+        pop %rdi # return type descriptor
+        push %rsi # identifier
+        push $696969 # type descriptor
+        push $696969 # type id
+        push $696969 # size int
+        push $696969 # char *name
+        call retrieve_type
+        addq $8, %rsp
+        
+        call emit_sub
+        call emit_dollar
+        pop %rdi
+        addq $16, %rsp
+        call emit_number
+        call emit_comma
+        call emit_rsp
+
         call emit_call
 
         pop %rdi
-        call emit_identifier        
+        call emit_identifier
         call emit_newline
 
         leave
@@ -338,6 +371,7 @@ visit_statement:
     visit_function:
         movq %rsi, %rdi
         call set_current_function
+        push $696969 # return type descriptor
         push $696969 # Arg list descriptor
         push $696969 # Symbol Table Descriptor
         push $696969 # Variable Count

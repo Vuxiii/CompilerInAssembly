@@ -3,6 +3,24 @@
 _start:
         push %rbp
         mov %rsp, %rbp
+
+        # Setup types
+        movq $0, %rsi
+        lea token_void(%rip), %rdi
+        movq $0, %rdx
+        movq $0, %rcx
+        call construct_type
+        movq $8, %rsi
+        lea token_int(%rip), %rdi
+        movq $0, %rdx
+        movq $0, %rcx
+        call construct_type
+        movq $8, %rsi
+        lea token_double(%rip), %rdi
+        movq $0, %rdx
+        movq $0, %rcx
+        call construct_type
+
         # Argc is in 8(%rbp)
         # If argc == 1
         #   * Read from std in

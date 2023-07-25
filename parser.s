@@ -28,6 +28,10 @@ _peek_data_:                    .int 0
 
 .global loop_buffer
         loop_buffer:             .space 1024
+.global return_buffer
+        return_buffer:           .space 1024
+.global type_buffer
+        type_buffer:             .space 1024
 .global function_call_buffer
         function_call_buffer:    .space 1024
 .global arg_buffer
@@ -83,6 +87,8 @@ function_call_offset:           .int 0
 arg_offset:                     .int 0
 arg_list_offset:                .int 1 # For functions with no args
 loop_offset:                    .int 0
+return_offset:                  .int 0
+type_offset:                    .int 0
 
 .global function_offset
         function_offset:        .int 0
@@ -131,6 +137,8 @@ parse_statement:
         je print_statement_
         cmp $49, %rax
         je loop_statement_
+        cmp $50, %rax
+        je return_statement_
     node_is_not_statement:
         movq $0, %rax # None
         leave
@@ -167,6 +175,12 @@ parse_statement:
         movq $28, %rax
         leave
         ret
+    return_statement_:
+        call return_statement
+        push %rax
+        push %rbx
+        jmp check_statement_list
+        
     loop_statement_:
         call loop_statement
         push %rax
@@ -238,6 +252,20 @@ parse_statement:
         jmp check_statement_list
 
 
+// out rax: token id
+// out rbx: token descriptor
+.type return_statement, @function
+return_statement:
+        enter $0, $0
+        call next_token
+        call parse_expression
+        movq %rax, %rdi
+        movq %rbx, %rsi
+        call construct_return
+        movq %rax, %rbx
+        movq $51, %rax
+        leave
+        ret
 
 // out rax: token id
 // out rbx: token descriptor
@@ -637,7 +665,35 @@ function_declaration:
         cmp $6, %rax # ')'
         jne emit_parse_error_missing_rparen
         call next_token
+        # Current: ')'
+
+        # Push void as default return type
+        call get_void_type
+        push %rax
+
+        call peek_token_id
+        cmp $7, %rax
+        je skip_return_type
+
+        call next_token
+        # Current: '->'
+
+        call peek_token_id
+        cmp $54, %rax
+        jne emit_not_implemented
+    vvvvvv:
+        // call peek_token_data
+        // movq %rax, %rdi
+        // call retrieve_identifier
+        // movq %rax, %rdi
+        lea token_int(%rip), %rdi
+        call find_type_by_charptr
+        movq %rax, (%rsp)        # Replace the type
         
+        call next_token
+        # Current: 'type'
+    skip_return_type:
+
         call peek_token_id
         cmp $7, %rax # '{'
         jne emit_parse_error_missing_lcurly
@@ -663,6 +719,7 @@ function_declaration:
 
         pop %rdx # body descriptor
         pop %rsi # body id
+        pop %r8  # Return type
         pop %rcx # arglist descriptor
         pop %rdi # identifier descriptor
         call construct_function_node
@@ -1474,6 +1531,31 @@ construct_arg:
         leave
         ret
 
+// in rdi: expression id
+// in rsi: expression descriptor
+// out rax: token descriptor
+.global construct_return
+.type construct_return, @function
+construct_return:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov return_offset(%rip), %eax
+        push %rax
+        
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea return_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+
+        pop %rax
+        incl (return_offset)(%rip)
+        leave
+        ret
+
 
 // in rdi: identifier descriptor
 // in rsi: arglist descriptor
@@ -1605,6 +1687,40 @@ construct_statement_list:
 
         pop %rax # Restore descriptor
         incl (statement_list_offset)(%rip)
+        leave
+        ret
+
+// in rdi: char *name
+// in rsi: size int
+// in rdx: type id (primitive_id|struct_id)
+// in rcx: type descriptor
+// out:    token descriptor
+.global construct_type
+.type construct_type, @function
+construct_type:
+        push %rbp
+        mov %rsp, %rbp
+        
+        xor %rbx, %rbx
+        xor %rax, %rax
+        # Compute correct offst into buffer
+        mov type_offset(%rip), %eax
+        push %rax # Store so we can return the descriptor
+        push %rdx # mulq uses rdx...
+        movq $20, %rdx # Size of statementlist (16 bytes)
+        mulq %rdx
+        mov %rax, %rbx
+        pop %rdx
+        # We now have the correct offset into the buffer
+        # Load buffer
+        lea type_buffer(%rip), %rax
+        movq %rdi,  (%rax, %rbx)
+        mov %esi,  8(%rax, %rbx)
+        mov %edx, 12(%rax, %rbx)
+        mov %ecx, 16(%rax, %rbx)
+
+        pop %rax # Restore descriptor
+        incl (type_offset)(%rip)
         leave
         ret
 
@@ -1884,6 +2000,7 @@ construct_binary_op_node:
 // in rsi: body id
 // in rdx: body descriptor
 // in rcx: arg list
+// in r8: return_type descriptor
 // out:    function descriptor
 .type construct_function_node, @function
 construct_function_node:
@@ -1895,7 +2012,7 @@ construct_function_node:
         push %rax # Store so we can return the descriptor
         # Ensure that we are offset by the correct size of each struct -> ebx * sizeof(binaryop) -> ebx * 20 bytes
         push %rdx # mulq uses rdx...
-        movq $24, %rdx
+        movq $32, %rdx
         mulq %rdx
         mov %rax, %rbx
         pop %rdx
@@ -1908,6 +2025,7 @@ construct_function_node:
         movl $0,  12(%rax, %rbx)
         movl $0,  16(%rax, %rbx)
         mov %ecx, 20(%rax, %rbx)
+        mov %r8d, 24(%rax, %rbx)
 
         pop %rax # Restore descriptor
         incl (function_offset)(%rip)
@@ -2060,6 +2178,31 @@ retrieve_arg:
         leave
         ret
 
+// in rdi: Token descriptor
+// out 16(%rbp): expression id
+// out 24(%rbp): expression descriptor
+.global retrieve_return
+.type retrieve_return, @function
+retrieve_return:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov %rdi, %rax
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea return_buffer(%rip), %rax
+        
+        mov   (%rax, %rbx), %edi
+        mov  4(%rax, %rbx), %esi
+        
+        mov %edi, 16(%rbp)
+        mov %esi, 24(%rbp)
+
+        leave
+        ret
+
 
 // in rdi: Token descriptor
 // out 16(%rbp): identifier descriptor
@@ -2162,6 +2305,36 @@ retrieve_statement_list:
         mov %esi, 24(%rbp)
         mov %edx, 32(%rbp)
         mov %ecx, 40(%rbp)
+
+        leave
+        ret
+
+// in rdi: Token descriptor
+// out 16(%rbp): char *name
+// out 24(%rbp): size int
+// out 32(%rbp): type id (primitive_id|struct_id)
+// out 40(%rbp): type_descriptor
+.type retrieve_type, @function
+.global retrieve_type
+retrieve_type:
+        push %rbp
+        mov %rsp, %rbp 
+        mov %rdi, %rax
+        movq $20, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea type_buffer(%rip), %rax
+        
+        movq  (%rax, %rbx), %rdi
+        mov  8(%rax, %rbx), %esi
+        mov 12(%rax, %rbx), %edx
+        mov 16(%rax, %rbx), %ecx
+        
+        movq %rdi, 16(%rbp)
+        mov  %esi, 24(%rbp)
+        mov  %edx, 32(%rbp)
+        mov  %ecx, 40(%rbp)
 
         leave
         ret
@@ -2331,13 +2504,14 @@ retrieve_binary_op:
 // out 40(%rbp): variable count int
 // out 48(%rbp): symbol table descriptor
 // out 54(%rbp): arg list descriptor
+// out 64(%rbp): return_type descriptor
 .type retrieve_function, @function
 .global retrieve_function
 retrieve_function:
         push %rbp
         mov %rsp, %rbp 
         mov %rdi, %rax
-        movq $24, %rdx
+        movq $32, %rdx
         mulq %rdx
         mov %rax, %rbx
 
@@ -2349,6 +2523,7 @@ retrieve_function:
         mov 12(%rax, %rbx), %ecx # variable count int
         mov 16(%rax, %rbx), %r8d # symbol table descriptor
         mov 20(%rax, %rbx), %r9d # arg list descriptor
+        mov 24(%rax, %rbx), %r10d # return_type descriptor
         
         mov %edi, 16(%rbp)
         mov %esi, 24(%rbp)
@@ -2356,6 +2531,7 @@ retrieve_function:
         mov %ecx, 40(%rbp)
         mov %r8d, 48(%rbp)
         mov %r9d, 54(%rbp)
+        mov %r10d,64(%rbp)
 
         leave
         ret
@@ -2381,6 +2557,86 @@ retrieve_struct_type:
         mov %edi, 16(%rbp)
         mov %esi, 24(%rbp)
 
+        leave
+        ret
+
+// in  rdi: char *name
+// out rax: Type descriptor
+.type find_type_by_charptr, @function
+.global find_type_by_charptr
+.type get_void_type, @function
+.global get_void_type
+get_void_type:
+        lea token_void(%rip), %rdi
+find_type_by_charptr:
+        enter $24, $0
+
+        lea type_buffer(%rip), %rsi
+        movq $0,    -8(%rbp) # Counter
+        movq %rsi, -16(%rbp) # Haystack
+        movq %rdi, -24(%rbp) # Needle
+
+    find_type_by_charptr_loop:
+        cmp $0, (%rsi)
+        je find_type_by_charptr_type_not_found
+
+        movq (%rsi), %rsi # Hay
+        call cmp_string
+        cmpb $1, %al
+        je find_type_by_charptr_found_type
+
+        incq -8(%rbp)
+        addq $20, -16(%rbp)
+        movq -16(%rbp), %rsi # Haystack
+        movq -24(%rbp), %rdi # Needle
+        jmp find_type_by_charptr_loop
+    
+    find_type_by_charptr_type_not_found:
+        movq $-1, %rax
+        leave
+        ret
+    find_type_by_charptr_found_type:
+        movq -8(%rbp), %rax
+        leave
+        ret
+
+// in  rdi: char *name
+// out rax: function descriptor
+.type find_function_by_charptr, @function
+.global find_function_by_charptr
+find_function_by_charptr:
+        enter $24, $0
+
+        lea function_buffer(%rip), %rsi
+        movl function_offset(%rip), %r8d
+        movq $0,    -8(%rbp) # Counter
+        movq %rsi, -16(%rbp) # Haystack
+        movq %rdi, -24(%rbp) # Needle
+
+    find_function_by_charptr_loop:
+        cmp %r8, -8(%rbp)
+        je find_function_by_charptr_not_found
+
+        
+        movl (%rsi), %edi
+        call retrieve_identifier
+        movq %rax, %rsi # Hay
+        movq -24(%rbp), %rdi # Needle
+        call cmp_string
+        cmpb $1, %al
+        je find_function_by_charptr_found
+
+        incq -8(%rbp)
+        addq $32, -16(%rbp)
+        movq -16(%rbp), %rsi # Haystack
+        jmp find_function_by_charptr_loop
+    
+    find_function_by_charptr_not_found:
+        movq $-1, %rax
+        leave
+        ret
+    find_function_by_charptr_found:
+        movq -8(%rbp), %rax
         leave
         ret
 

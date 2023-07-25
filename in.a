@@ -1,15 +1,8 @@
 def main() {
-    loop 10+2 {
-        if true {
-            print(1)
-        }
-    }
-    while false {
-        print(2)
-    }
-} EOP
+    fib(1)
+} 
 
-def fib( n ) {
+def fib() -> int {
     f1 = 0
     f2 = 1
     tmp = 1
@@ -20,7 +13,7 @@ def fib( n ) {
         f2 = tmp
         n = n - 1
     }
-}
+} EOP
 
 EOP
 

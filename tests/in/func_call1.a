@@ -1,0 +1,19 @@
+def main() {
+    n = 10
+    n = fib(n)
+    print(n)
+}
+
+def fib( n ) {
+    f1 = 0
+    f2 = 1
+    tmp = 1
+    i = 0
+    while (n != 0) {
+        tmp = f1 + f2
+        f1 = f2
+        f2 = tmp
+        n = n - 1
+    }
+    return f2
+} EOP

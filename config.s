@@ -89,6 +89,16 @@
         token_deref:      .asciz "~"     # 45
 .global token_loopii
         token_loopii:     .asciz "loop"  # 49
+.global token_return
+        token_return:     .asciz "return"# 50
+.global token_arrow
+        token_arrow:      .asciz "->"    # 52
+.global token_int
+        token_int:        .asciz "int"   # 54
+.global token_double
+        token_double:     .asciz "double"# 55
+.global token_void
+        token_void:       .asciz "void"  # 56
 
 .global number_0
         number_0:   .asciz "0" # value: 48

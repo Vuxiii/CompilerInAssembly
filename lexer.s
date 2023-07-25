@@ -228,9 +228,37 @@ identify_token:
         je return_if_token
 
         movq %rdx, %rdi
+        movq $token_return, %rsi
+        movq $6, %rcx
+        repe cmpsb
+        je return_return_token
+
+        movq %rdx, %rdi
         movq $token_equals, %rsi
         cmpsw
         je return_equals_token
+
+        movq %rdx, %rdi
+        movq $token_int, %rsi
+        movq $3, %rcx
+        repe cmpsb
+        je return_int_token
+
+        movq %rdx, %rdi
+        movq $token_double, %rsi
+        movq $6, %rcx
+        repe cmpsb
+        je return_double_token
+
+        movq %rdx, %rdi
+        movq $token_void, %rsi
+        repe cmpsl
+        je return_void_token
+
+        movq %rdx, %rdi
+        movq $token_arrow, %rsi
+        cmpsw
+        je return_arrow_token
 
         movq %rdx, %rdi
         movq $token_noteq, %rsi
@@ -378,6 +406,36 @@ identify_token:
 
             movq $0, %rbx
             movq $1, %rax
+            ret
+        return_int_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $54, %rax
+            ret
+        return_double_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $55, %rax
+            ret
+        return_void_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $56, %rax
+            ret
+        return_arrow_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $52, %rax
+            ret
+        return_return_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $50, %rax
             ret
         return_if_token:
             movq %rdi, (buffer_address)(%rip)

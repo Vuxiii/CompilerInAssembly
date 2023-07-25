@@ -110,6 +110,7 @@ function:        descriptor
     var_count:   int
     symbol_table:descriptor
     arg_list:    descriptor
+    return_type: descriptor
 
 if_statement:    descriptor
     type: 31
@@ -196,6 +197,24 @@ loop: size = 16
     body->type:  token_id
     body->desc:  descriptor
 
+return: size = 8
+    type: 51
+    expr->type:  token_id
+    expr->desc:  descriptor
+
+type: size = 20
+    type: 53
+    name:         char *
+    size:         int
+    type->id:     token_id
+    type->desc:   descriptor
+
+type: size = 20
+    [(name_char_ptr, size, type_id, type_descriptor)]
+
+return: size = 8
+    [(expression_type, expression_descriptor),...]
+
 loop: size = 16
     [(count_type, count_descriptor, body_type, body_descriptor),...]
 
@@ -238,8 +257,8 @@ while_buffer: size = 16
 if_buffer: size = 16
     [(guard_id, guard_descriptor, body_id, body_descriptor),...]
 
-function_buffer: size = 24
-    [(identifier, body_id, body_descriptor, var_count, symbol_table, arg_list),...]
+function_buffer: size = 32
+    [(identifier, body_id, body_descriptor, var_count, symbol_table, arg_list, return_type_descriptor),...]
 
 statement_list_buffer: size = 16
     [(lhs_id, lhs_descriptor, rhs_id, rhs_descriptor),...]
