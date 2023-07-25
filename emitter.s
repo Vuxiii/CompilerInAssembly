@@ -813,27 +813,53 @@ visit_expression:
         leave 
         ret
     insert_equals:
-        call insert_comparison_prologue
-        call emit_cmove
-        call insert_comparison_epilogue
+        
+        call emit_cmp
+        call emit_rax
+        call emit_comma
+        call emit_rbx
+        
+        call emit_sete
+        call emit_rax8
+        call emit_push
+        call emit_rax
+
         leave 
         ret
     insert_noteq:
-        call insert_comparison_prologue
-        call emit_cmovne
-        call insert_comparison_epilogue
+        call emit_cmp
+        call emit_rax
+        call emit_comma
+        call emit_rbx
+        
+        call emit_setne
+        call emit_rax8
+        call emit_push
+        call emit_rax
         leave 
         ret
     insert_less:
-        call insert_comparison_prologue
-        call emit_cmovl
-        call insert_comparison_epilogue
+        call emit_cmp
+        call emit_rax
+        call emit_comma
+        call emit_rbx
+        
+        call emit_setl
+        call emit_rax8
+        call emit_push
+        call emit_rax
         leave 
         ret
     insert_greater:
-        call insert_comparison_prologue
-        call emit_cmovg
-        call insert_comparison_epilogue
+        call emit_cmp
+        call emit_rax
+        call emit_comma
+        call emit_rbx
+        
+        call emit_setg
+        call emit_rax8
+        call emit_push
+        call emit_rax
         leave
         ret
     insert_and:
@@ -848,7 +874,6 @@ visit_expression:
         leave
         ret
     insert_or:
-        
         call emit_or
         call emit_rax
         call emit_comma
@@ -857,46 +882,6 @@ visit_expression:
         call emit_push
         call emit_rbx
         
-        leave
-        ret
-    insert_comparison_prologue:
-        push %rbp
-        mov %rsp, %rbp
-
-        # Set up for true
-        call emit_mov
-        call emit_dollar
-        movq $1, %rdi
-        call emit_number
-        call emit_comma
-        call emit_rdx
-
-        # Default to false
-        call emit_mov
-        call emit_dollar
-        movq $0, %rdi
-        call emit_number
-        call emit_comma
-        call emit_rcx
-
-        call emit_cmp
-        call emit_rax
-        call emit_comma
-        call emit_rbx
-
-        leave
-        ret
-    insert_comparison_epilogue:
-        push %rbp
-        mov %rsp, %rbp
-
-        call emit_rdx
-        call emit_comma
-        call emit_rcx
-        call emit_push
-        call emit_rcx
-        call emit_newline_tab
-
         leave
         ret
 
@@ -1197,6 +1182,50 @@ emit_pop:
         syscall
         leave
         ret
+.type emit_sete, @function
+emit_sete:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_sete, %rsi
+        movq $7, %rdx
+        syscall
+        leave
+        ret
+.type emit_setne, @function
+emit_setne:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_setne, %rsi
+        movq $8, %rdx
+        syscall
+        leave
+        ret
+.type emit_setg, @function
+emit_setg:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_setg, %rsi
+        movq $7, %rdx
+        syscall
+        leave
+        ret
+.type emit_setl, @function
+emit_setl:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_setl, %rsi
+        movq $7, %rdx
+        syscall
+        leave
+        ret
 .type emit_mov, @function
 emit_mov:
         push %rbp
@@ -1417,6 +1446,17 @@ emit_or:
         syscall
         leave
         ret
+.type emit_xor, @function
+emit_xor:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_xor, %rsi
+        movq $7, %rdx
+        syscall
+        leave
+        ret
 .type emit_rax, @function
 emit_rax:
         push %rbp
@@ -1425,6 +1465,17 @@ emit_rax:
         movq $1, %rdi
         leaq _emit_rax, %rsi
         movq $4, %rdx
+        syscall
+        leave
+        ret
+.type emit_rax8, @function
+emit_rax8:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_rax8, %rsi
+        movq $3, %rdx
         syscall
         leave
         ret

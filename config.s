@@ -153,10 +153,22 @@
         _emit_and: .asciz "\n\tandq "
 .global _emit_or
         _emit_or: .asciz "\n\torq "
+.global _emit_xor
+        _emit_xor: .asciz "\n\txorq "
+.global _emit_sete
+        _emit_sete: .asciz "\n\tsete "
+.global _emit_setne
+        _emit_setne: .asciz "\n\tsetne "
+.global _emit_setg
+        _emit_setg: .asciz "\n\tsetg "
+.global _emit_setl
+        _emit_setl: .asciz "\n\tsetl "
 
 # --[ Operands ]--
 .global _emit_rax
         _emit_rax: .asciz "%rax"
+.global _emit_rax8
+        _emit_rax8: .asciz "%al"
 .global _emit_rbx
         _emit_rbx: .asciz "%rbx"
 .global _emit_rcx

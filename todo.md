@@ -29,6 +29,16 @@
     f. While statement
     g. Multiple Boolean Conditions
     h. Parse Errors
+6. Conditional set
+    Replace the current guard scheme with the instruction set(b|l|ne|e)
+7. New Instructions
+    * LOOPcc label
+        This instruction jump to the given label if the condition is met. RCX == 0
+        It decrements rcx by 1 for each loop iteration.
+    * enter imm, imm
+        This instruction is the reverse of leave. It sets up a stack frame
+        The first operand is the amount of bytes for the frame IE variables
+        The second is the nesting level. Upto 31
 
 ## Nice to have
 
