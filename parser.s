@@ -682,23 +682,10 @@ if_statement:
         # eat the if
         call next_token
 
-        # eat the '('
-        call next_token
-
-        call current_token_id
-        cmp $5, %rax
-        jne emit_parse_error_missing_lparen
-
         # parse the expression
         call parse_expression
         push %rax # id
         push %rbx # descriptor
-        # eat the ')'
-        call next_token
-
-        call current_token_id
-        cmp $6, %rax
-        jne emit_parse_error_missing_rparen
 
         # eat the '{'
         call next_token
@@ -738,24 +725,11 @@ while_statement:
 
         call next_token
         # Current: "While"
-        call next_token
-        # Current: '('
-
-        call current_token_id
-        cmp $5, %rax
-        jne emit_parse_error_missing_lparen
-
+       
         # parse the expression
         call parse_expression
         push %rax # id
         push %rbx # descriptor
-        
-        call next_token
-        # current: ')'
-
-        call current_token_id
-        cmp $6, %rax
-        jne emit_parse_error_missing_rparen
         
         # eat the '{'
         call next_token
@@ -1174,11 +1148,17 @@ parse_expression:
     # [6]: 'identifier' '.' 'identifier' '[' expr ']'
     # [7]: '&' expr
     # [8]: '~' expr
+    # [9]: 'true'
+    # [a]: 'false'
             push %rbp
             mov %rsp, %rbp
             call peek_token_id
             cmp $25, %rax
             je parse_token_return_number
+            cmp $19, %rax
+            je parse_token_return_true_false
+            cmp $20, %rax
+            je parse_token_return_true_false
             cmp $24, %rax
             je parse_token_return_identifier
             cmp $42, %rax
@@ -1328,6 +1308,15 @@ parse_expression:
             movq $44, %rax
             leave
             ret
+        parse_token_return_true_false:
+        # Case [9]
+            call next_token
+            # Current: 'true|false'
+            call current_token_data
+            movq %rax, %rbx
+            call current_token_id
+            leave
+            ret
 
 
 // in rdi: error buffer
@@ -1386,6 +1375,7 @@ emit_parse_error_exit:
         call emit_newline
 
         movq $60, %rax
+        movq (%rax), %rax
         movq $1, %rdi
         syscall
 

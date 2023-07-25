@@ -211,12 +211,6 @@ identify_token:
 
         movq %rdi, %rdx
 
-        // movq $token_loopii, %rsi
-        // callq cmp_string
-        // cmp $1, %ax
-        // je return_loop_token
-
-        # Test
         cld
         movq $token_loopii, %rsi
         cmpsl
@@ -230,17 +224,17 @@ identify_token:
         
         movq %rdx, %rdi
         movq $token_if, %rsi
-        cmpsl
+        cmpsw
         je return_if_token
 
         movq %rdx, %rdi
         movq $token_equals, %rsi
-        cmpsl
+        cmpsw
         je return_equals_token
 
         movq %rdx, %rdi
         movq $token_noteq, %rsi
-        cmpsl
+        cmpsw
         je return_notequals_token
 
         movq %rdx, %rdi
@@ -333,7 +327,7 @@ identify_token:
 
         movq %rdx, %rdi
         movq $token_true, %rsi
-        cmpsw
+        cmpsl
         je return_true_token
 
         movq %rdx, %rdi
@@ -350,12 +344,12 @@ identify_token:
 
         movq %rdx, %rdi
         movq $token_and, %rsi
-        cmpsl
+        cmpsw
         je return_and_token
 
         movq %rdx, %rdi
         movq $token_or, %rsi
-        cmpsl
+        cmpsw
         je return_or_token
 
         movq %rdx, %rdi

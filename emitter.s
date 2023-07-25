@@ -576,8 +576,28 @@ visit_expression:
         je addressof
         cmp $44, %rdi # eref
         je deref
+        cmp $19, %rdi # true
+        je true
+        cmp $20, %rdi # false
+        je false
         # It was neither a binary op nor a number
         leave 
+        ret
+    true:
+        call emit_push
+        call emit_dollar
+        movq $1, %rdi
+        call emit_number
+        call emit_newline_tab
+        leave
+        ret
+    false:
+        call emit_push
+        call emit_dollar
+        movq $0, %rdi
+        call emit_number
+        call emit_newline_tab
+        leave
         ret
     deref:
         movq %rsi, %rdi
