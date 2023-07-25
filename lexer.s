@@ -87,7 +87,9 @@ token_remove_white_space:
 token_loop:
     // Check for keyword tokens
     push %rdi
+    push %rcx
     callq identify_token
+    pop %rcx
     pop %rdi
     cmp $-1, %rax # We are done EOP
     je get_token_return_eop
@@ -101,9 +103,9 @@ not_keyword:
     movb (%rdi, %rcx), %al
 
     // Check for number
-    cmp (number_0), %al
+    cmp $48, %al # 0
     jl not_a_number
-    cmp (number_9), %al
+    cmp $57, %al # 9
     jg not_a_number
     // It is a number.
     mov %rcx, %r9 # Store the start number in the buffer
@@ -209,185 +211,166 @@ identify_token:
 
         movq %rdi, %rdx
 
-        movq %rdx, %rdi
-        movq $token_loopii, %rsi
-        callq cmp_string
-        cmp $1, %ax
-        je return_loop_token
+        // movq $token_loopii, %rsi
+        // callq cmp_string
+        // cmp $1, %ax
+        // je return_loop_token
 
+        # Test
+        cld
+        movq $token_loopii, %rsi
+        cmpsl
+        je return_loop_token
 
         movq %rdx, %rdi
         movq $token_def, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        movq $3, %rcx
+        repe cmpsb
         je return_def_token
         
         movq %rdx, %rdi
         movq $token_if, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsl
         je return_if_token
 
         movq %rdx, %rdi
         movq $token_equals, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsl
         je return_equals_token
 
         movq %rdx, %rdi
         movq $token_noteq, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsl
         je return_notequals_token
 
         movq %rdx, %rdi
         movq $token_assignment, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_assignment_token
 
         movq %rdx, %rdi
         movq $token_lparen, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_lparen_token
 
         movq %rdx, %rdi
         movq $token_rparen, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_rparen_token
 
         movq %rdx, %rdi
         movq $token_lbracket, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_lbracket_token
 
         movq %rdx, %rdi
         movq $token_rbracket, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_rbracket_token
 
         movq %rdx, %rdi
         movq $token_lcurly, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_lcurly_token
 
         movq %rdx, %rdi
         movq $token_rcurly, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_rcurly_token
 
         movq %rdx, %rdi
         movq $token_comma, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_comma_token
 
         movq %rdx, %rdi
         movq $token_print, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        movq $5, %rcx
+        repe cmpsb
         je return_print_token
 
         movq %rdx, %rdi
         movq $token_eop, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        movq $3, %rcx
+        repe cmpsb
         je return_eop_token
 
         movq %rdx, %rdi
         movq $token_while, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        movq $5, %rcx
+        repe cmpsb
         je return_while_token
 
         movq %rdx, %rdi
         movq $token_plus, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_plus_token
 
         movq %rdx, %rdi
         movq $token_minus, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_minus_token
 
         movq %rdx, %rdi
         movq $token_times, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_times_token
 
         movq %rdx, %rdi
         movq $token_div, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_div_token
 
         movq %rdx, %rdi
         movq $token_less, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_less_token
 
         movq %rdx, %rdi
         movq $token_greater, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_greater_token
 
         movq %rdx, %rdi
         movq $token_true, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsw
         je return_true_token
 
         movq %rdx, %rdi
         movq $token_false, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        movq $5, %rcx
+        repe cmpsb
         je return_false_token
 
         movq %rdx, %rdi
         movq $token_struct, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        movq $6, %rcx
+        repe cmpsb
         je return_struct_token
 
         movq %rdx, %rdi
         movq $token_and, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsl
         je return_and_token
 
         movq %rdx, %rdi
         movq $token_or, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsl
         je return_or_token
 
         movq %rdx, %rdi
         movq $token_dot, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_dot_token
 
         movq %rdx, %rdi
         movq $token_ampersand, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_ampersand_token
 
         movq %rdx, %rdi
         movq $token_deref, %rsi
-        callq cmp_string
-        cmp $1, %ax
+        cmpsb
         je return_deref_token
 
         

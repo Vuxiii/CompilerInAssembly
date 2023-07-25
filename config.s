@@ -9,7 +9,7 @@
 
 .global number_tokens
         number_tokens:     .space 256 # These number tokens can be indexed into. Each number spans 4 bytes (32 bit)
-                           .type number_token, @object
+                        //    .type number_token, .int
                            .size number_tokens, 4
 
 .global identifier_tokens

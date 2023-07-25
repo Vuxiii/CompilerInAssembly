@@ -189,14 +189,14 @@ arg_list: size = 4 + count * 4
     count:       int
     args:        descriptor[]
 
-loop_list: size = 16
+loop: size = 16
     type: 49
     count->type: token_id
     count->desc: descriptor
     body->type:  token_id
     body->desc:  descriptor
 
-loop_list: size = 16
+loop: size = 16
     [(count_type, count_descriptor, body_type, body_descriptor),...]
 
 arg_list: size = 4 + count * 8
