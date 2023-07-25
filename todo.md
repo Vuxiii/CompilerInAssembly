@@ -39,6 +39,12 @@
         This instruction is the reverse of leave. It sets up a stack frame
         The first operand is the amount of bytes for the frame IE variables
         The second is the nesting level. Upto 31
+    * STD
+        This instruction sets the direction flag for string comparisons towards positive
+    * CLD
+        This instruction sets the direction flag for string comparisons towards negative
+8. Loops
+    * Add an iterator for 'loop' that returns the current value of guard - rcx.
 
 ## Nice to have
 

@@ -92,10 +92,10 @@ visit_statement:
         push %rbp
         mov %rsp, %rbp
 
-        cmp $29, %rdi
-        je visit_assignment
         cmp $28, %rdi
         je visit_statement_list
+        cmp $29, %rdi
+        je visit_assignment
         cmp $30, %rdi
         je visit_function
         cmp $31, %rdi
@@ -106,9 +106,49 @@ visit_statement:
         je visit_print
         cmp $46, %rdi
         je visit_function_call
+        cmp $49, %rdi
+        je visit_loop
         leave
         ret
+    visit_loop:
+        movq %rsi, %rdi
+        push %rdi
+        push $696969 # body descriptor
+        push $696969 # Body type
+        push $696969 # Count descriptor 
+        push $696969 # Count type
+        call retrieve_loop
+        pop %rdi
+        pop %rsi
+        call visit_expression
 
+        call emit_pop
+        call emit_rcx
+        call emit_newline
+        call emit_loop
+        movq 16(%rsp), %rdi
+        call emit_number
+        call emit_colon
+        call emit_push
+        call emit_rcx
+        pop %rdi
+        pop %rsi
+        call visit_statement
+
+        call emit_pop
+        call emit_rcx
+        call emit_test
+        call emit_rcx
+        call emit_comma
+        call emit_rcx
+
+        call emit_loopnz
+        call emit_loop
+        pop %rdi
+        call emit_number
+        call emit_newline_tab
+        leave
+        ret
     visit_function_call:
         movq %rsi, %rdi
         push $696969 # arglist descriptor
@@ -1413,6 +1453,17 @@ emit_cmp:
         syscall
         leave
         ret
+.type emit_test, @function
+emit_test:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_test, %rsi
+        movq $7, %rdx
+        syscall
+        leave
+        ret
 .type emit_neg, @function
 emit_neg:
         push %rbp
@@ -1691,6 +1742,28 @@ emit_if:
         movq $1, %rdi
         leaq token_if, %rsi
         movq $2, %rdx
+        syscall
+        leave
+        ret
+.type emit_loop, @function
+emit_loop:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq token_loopii, %rsi
+        movq $4, %rdx
+        syscall
+        leave
+        ret
+.type emit_loopnz, @function
+emit_loopnz:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_loopnz, %rsi
+        movq $9, %rdx
         syscall
         leave
         ret

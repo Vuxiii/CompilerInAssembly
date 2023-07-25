@@ -87,6 +87,8 @@
         token_ampersand:  .asciz "&"     # 42
 .global token_deref
         token_deref:      .asciz "~"     # 45
+.global token_loopii
+        token_loopii:     .asciz "loop"  # 49
 
 .global number_0
         number_0:   .asciz "0" # value: 48
@@ -147,6 +149,8 @@
         _emit_jge: .asciz "\n\tjge "
 .global _emit_cmp
         _emit_cmp: .asciz "\n\tcmp "
+.global _emit_test
+        _emit_test: .asciz "\n\ttest "
 .global _emit_neg
         _emit_neg: .asciz "\n\tneg "
 .global _emit_and
@@ -163,6 +167,8 @@
         _emit_setg: .asciz "\n\tsetg "
 .global _emit_setl
         _emit_setl: .asciz "\n\tsetl "
+.global _emit_loopnz
+        _emit_loopnz: .asciz "\n\tloopnz "
 
 # --[ Operands ]--
 .global _emit_rax

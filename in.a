@@ -1,15 +1,6 @@
 def main(n) {
-    if (1 == 2 || 1) {
+    loop 10+2 {
         print(1)
-    }
-    if (1 != 2 || 1) {
-        print(2)
-    }
-    if (1 < 2 || 1) {
-        print(3)
-    }
-    if (1 > 2 || 1) {
-        print(4)
     }
 } EOP
 

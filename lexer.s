@@ -208,6 +208,15 @@ identify_token:
     // Check one by one for the correct token
 
         movq %rdi, %rdx
+
+        movq %rdx, %rdi
+        movq $token_loopii, %rsi
+        callq cmp_string
+        cmp $1, %ax
+        je return_loop_token
+
+
+        movq %rdx, %rdi
         movq $token_def, %rsi
         callq cmp_string
         cmp $1, %ax
@@ -554,6 +563,12 @@ identify_token:
 
             movq $0, %rbx
             movq $45, %rax
+            ret
+        return_loop_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $49, %rax
             ret
         return_eop_token:
             movq %rdi, (buffer_address)(%rip)

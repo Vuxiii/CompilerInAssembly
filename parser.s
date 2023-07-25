@@ -26,6 +26,8 @@ _token_data_:                   .int 0
 _peek_data_:                    .int 0
 
 
+.global loop_buffer
+        loop_buffer:             .space 1024
 .global function_call_buffer
         function_call_buffer:    .space 1024
 .global arg_buffer
@@ -80,6 +82,7 @@ deref_offset:                   .int 0
 function_call_offset:           .int 0
 arg_offset:                     .int 0
 arg_list_offset:                .int 1 # For functions with no args
+loop_offset:                    .int 0
 
 .global function_offset
         function_offset:        .int 0
@@ -126,6 +129,8 @@ parse_statement:
         je struct_statement_
         cmp $11, %rax
         je print_statement_
+        cmp $49, %rax
+        je loop_statement_
     node_is_not_statement:
         movq $0, %rax # None
         leave
@@ -162,7 +167,12 @@ parse_statement:
         movq $28, %rax
         leave
         ret
-
+    loop_statement_:
+        call loop_statement
+        push %rax
+        push %rbx
+        jmp check_statement_list
+        
     print_statement_:
         call print_statement
         push %rax
@@ -227,7 +237,47 @@ parse_statement:
         push %rbx # descriptor
         jmp check_statement_list
 
-    
+
+
+// out rax: token id
+// out rbx: token descriptor
+.type loop_statement, @function
+loop_statement:
+        enter $0, $0
+        call next_token
+        # Current: 'loop'
+        call parse_expression
+        push %rax
+        push %rbx
+
+        call peek_token_id
+        cmp $7, %rax
+        jne emit_parse_error_missing_lcurly
+
+        call next_token
+        # Current: '{'
+
+        call parse_statement
+        push %rax
+        push %rbx
+
+        call peek_token_id
+        cmp $8, %rax
+        jne emit_parse_error_missing_rcurly
+
+        call next_token
+        # Current: '}'
+
+        pop %rcx
+        pop %rdx
+        pop %rsi
+        pop %rdi
+        call construct_loop
+        movq %rax, %rbx
+        movq $49, %rax
+        leave
+        ret
+
 // out rax: token id
 // out rbx: token descriptor
 .type function_call, @function
@@ -1340,6 +1390,37 @@ emit_parse_error_exit:
         syscall
 
 
+// in rdi: count type
+// in rsi: count descriptor
+// in rdx: body type
+// in rcx: body descriptor
+// out rax: token descriptor
+.global construct_loop
+.type construct_loop, @function
+construct_loop:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov loop_offset(%rip), %eax
+        push %rax
+        push %rdx
+        
+        movq $16, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+        pop %rdx
+
+        lea loop_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+        mov %edx,  8(%rax, %rbx)
+        mov %ecx, 12(%rax, %rbx)
+
+        pop %rax
+        incl (loop_offset)(%rip)
+        
+        leave
+        ret
 // in rdi: count
 // in rsi: arg descriptor[]
 // out rax: token descriptor
@@ -1399,12 +1480,7 @@ construct_arg:
         mov %esi,  4(%rax, %rbx)
 
         pop %rax
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (arg_offset)(%rip)
-        
-
+        incl (arg_offset)(%rip)
         leave
         ret
 
@@ -1430,12 +1506,7 @@ construct_function_call:
         mov %esi,  4(%rax, %rbx)
 
         pop %rax
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (function_call_offset)(%rip)
-        
-
+        incl (function_call_offset)(%rip)
         leave
         ret
         
@@ -1460,12 +1531,7 @@ construct_deref:
         mov %esi,  4(%rax, %rbx)
 
         pop %rax
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (deref_offset)(%rip)
-        
-
+        incl (deref_offset)(%rip)
         leave
         ret
 
@@ -1490,12 +1556,7 @@ construct_addressof:
         mov %esi,  4(%rax, %rbx)
 
         pop %rax
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (addressof_offset)(%rip)
-        
-
+        incl (addressof_offset)(%rip)
         leave
         ret
 
@@ -1519,11 +1580,7 @@ construct_struct_type:
         mov %esi,  4(%rax, %rbx)
 
         pop %rax
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (struct_type_offset)(%rip)
-        
+        incl (struct_type_offset)(%rip)
         leave
         ret
 
@@ -1557,11 +1614,7 @@ construct_statement_list:
         mov %ecx, 12(%rax, %rbx)
 
         pop %rax # Restore descriptor
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (statement_list_offset)(%rip)
-
+        incl (statement_list_offset)(%rip)
         leave
         ret
 
@@ -1595,11 +1648,7 @@ construct_array_assignment:
         mov %ecx, 12(%rax, %rbx)
 
         pop %rax # Restore descriptor
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (array_assignment_offset)(%rip)
-
+        incl (array_assignment_offset)(%rip)
         leave
         ret
 
@@ -1630,11 +1679,7 @@ construct_array_access:
         mov %ecx, 12(%rax, %rbx)
         
         pop %rax # Restore descriptor
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (array_access_offset)(%rip)
-
+        incl (array_access_offset)(%rip)
         leave
         ret
 
@@ -1666,11 +1711,7 @@ construct_assignment_node:
         mov %ecx, 12(%rax, %rbx)
 
         pop %rax # Restore descriptor
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (assignment_offset)(%rip)
-
+        incl (assignment_offset)(%rip)
         leave
         ret
 
@@ -1698,11 +1739,7 @@ construct_field_access_node:
         mov %esi,  4(%rax, %rbx)
 
         pop %rax # Restore descriptor
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (field_access_offset)(%rip)
-
+        incl (field_access_offset)(%rip)
         leave
         ret
 
@@ -1731,11 +1768,7 @@ construct_struct_instance:
         mov %esi,  4(%rax, %rbx)
 
         pop %rax # Restore descriptor
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (struct_instance_offset)(%rip)
-
+        incl (struct_instance_offset)(%rip)
         leave
         ret
 
@@ -1762,10 +1795,7 @@ construct_print_node:
         mov %esi,  4(%rax, %rbx)
 
         pop %rax # Restore descriptor
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (print_statement_offset)(%rip)
+        incl (print_statement_offset)(%rip)
 
         leave
         ret
@@ -1855,11 +1885,7 @@ construct_binary_op_node:
         mov %esi, 16(%rax, %rbx)
         
         pop %rax # Restore descriptor
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (binary_op_offset)(%rip)
-
+        incl (binary_op_offset)(%rip)
         leave
         ret
 
@@ -1894,11 +1920,8 @@ construct_function_node:
         mov %ecx, 20(%rax, %rbx)
 
         pop %rax # Restore descriptor
-        movq %rax, %rbx
-        inc %ebx
+        incl (function_offset)(%rip)
         # Store next available descriptor 
-        mov %ebx, (function_offset)(%rip)
-
         leave
         ret
 
@@ -1929,10 +1952,7 @@ construct_if_node:
         mov %ecx, 12(%rax, %rbx)
         
         pop %rax # Restore descriptor
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (if_offset)(%rip)
+        incl (if_offset)(%rip)
 
         leave
         ret
@@ -1963,17 +1983,43 @@ construct_while_node:
         mov %ecx, 12(%rax, %rbx)
         
         pop %rax # Restore descriptor
-        movq %rax, %rbx
-        inc %ebx
-        # Store next available descriptor 
-        mov %ebx, (while_offset)(%rip)
-
+        incl (while_offset)(%rip)
         leave
         ret
 
 
 
 
+// in rdi: Token descriptor
+// out 16(%rbp): Count type
+// out 24(%rbp): Count descriptor
+// out 32(%rbp): body type
+// out 40(%rbp): body descriptor
+.global retrieve_loop
+.type retrieve_loop, @function
+retrieve_loop:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov %rdi, %rax
+        movq $16, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea loop_buffer(%rip), %rax
+        addq %rbx, %rax
+        mov   (%rax), %edi
+        mov  4(%rax), %esi
+        mov  8(%rax), %edx
+        mov 12(%rax), %ecx
+        
+        mov %edi, 16(%rbp)
+        mov %rsi, 24(%rbp)
+        mov %edx, 32(%rbp)
+        mov %ecx, 40(%rbp)
+
+        leave
+        ret
 // in rdi: Token descriptor
 // out 16(%rbp): Count
 // out 24(%rbp): Arg Descriptor*
