@@ -1,6 +1,6 @@
 .section .data
-s1: .asciz "equals"
-s2: .asciz "equals "
+s1: .asciz "void"
+s2: .asciz "void asdf"
 
 .section .text
 .global _start
@@ -10,8 +10,8 @@ _start:
         movq $s1, %rsi
         movq $s2, %rdi
         cld
-        movq $8, %rcx
-        repe cmpsb 
+        cmpsl
+        cmpsb
         je crash
 
         leave

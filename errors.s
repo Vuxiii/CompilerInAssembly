@@ -167,3 +167,20 @@ emit_struct_field_not_found:
         
     movq $error_struct_field_not_found, %rdi
     jmp emit_parse_error_exit
+
+
+.type emit_expected_identifier, @function
+.global emit_expected_identifier
+emit_expected_identifier:
+        
+    movq $error_expected_identifier, %rdi
+    jmp emit_parse_error_exit
+
+
+.type emit_unknown_type, @function
+.global emit_unknown_type
+emit_unknown_type:
+        
+    movq $error_unknown_type, %rdi
+    jmp emit_parse_error_exit
+

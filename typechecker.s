@@ -5,6 +5,7 @@
 setup_types:
         enter $16, $0
         # Iterate over each type
+
         movq $0, -8(%rbp)
         lea type_buffer(%rip), %rax
         movq %rax, -16(%rbp)
@@ -12,7 +13,7 @@ setup_types:
         movq -16(%rbp), %rax
         
         movl 12(%rax), %ebx # type.
-        cmp $24, %rbx
+        cmp $0, %rbx
         je setup_types_continue
 
         movl 16(%rax), %edi
@@ -61,7 +62,7 @@ setup_types:
             addq %rbx, -24(%rbp) # add size for THIS field.
         size_is_known:
             cmpq  $0, -8(%rbp)
-            jne check_next_field
+            jg check_next_field
         movq -24(%rbp), %rbx
         leave
     asdfasdfasdf:
@@ -73,7 +74,7 @@ setup_types:
         incq -8(%rbp)
         movq -8(%rbp), %rcx
         cmp (type_offset)(%rip), %rcx
-        jl setup_types_next_type
+        jg setup_types_next_type
         leave
         ret
 

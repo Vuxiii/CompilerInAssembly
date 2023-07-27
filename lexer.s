@@ -218,14 +218,12 @@ identify_token:
 
         movq %rdx, %rdi
         movq $token_def, %rsi
-        movq $3, %rcx
-        repe cmpsb
+        cmpsl
         je return_def_token
 
         movq %rdx, %rdi
         movq $token_let, %rsi
-        movq $3, %rcx
-        repe cmpsb
+        cmpsl
         je return_let_token
 
         movq %rdx, %rdi
@@ -246,12 +244,13 @@ identify_token:
 
         movq %rdx, %rdi
         movq $token_if, %rsi
-        cmpsw
+        movq $3, %rcx
+        repe cmpsb
         je return_if_token
 
         movq %rdx, %rdi
         movq $token_return, %rsi
-        movq $6, %rcx
+        movq $7, %rcx
         repe cmpsb
         je return_return_token
 
@@ -260,21 +259,11 @@ identify_token:
         cmpsw
         je return_equals_token
 
-        // movq %rdx, %rdi
-        // movq $token_int, %rsi
-        // movq $3, %rcx
-        // repe cmpsb
-        // je return_int_token
-
-        // movq %rdx, %rdi
-        // movq $token_double, %rsi
-        // movq $6, %rcx
-        // repe cmpsb
-        // je return_double_token
 
         movq %rdx, %rdi
         movq $token_void, %rsi
-        repe cmpsl
+        movq $5, %rcx
+        repe cmpsb
         je return_void_token
 
         movq %rdx, %rdi
@@ -326,12 +315,6 @@ identify_token:
         movq $token_comma, %rsi
         cmpsb
         je return_comma_token
-
-        movq %rdx, %rdi
-        movq $token_print, %rsi
-        movq $5, %rcx
-        repe cmpsb
-        je return_print_token
 
         movq %rdx, %rdi
         movq $token_eop, %rsi

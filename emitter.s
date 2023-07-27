@@ -412,17 +412,7 @@ visit_statement:
         call emit_sub
         call emit_dollar
 
-        movq 40(%rsp), %rbx
-        push $696969 # Arg descriptor*
-        push $696969 # Count
-        call retrieve_arg_list
-        pop %rbx # Parameter Count
-        addq $8, %rsp # Remove the arg descriptor *
-        movq 16(%rsp), %rax # var count
-        
-        // movq $8, %rdx
-        // imulq %rdx
-        movq %rax, %rdi
+        movq 16(%rsp), %rdi # var size
         call emit_number
         call emit_comma
         call emit_rsp
@@ -544,8 +534,8 @@ visit_statement:
         movq 8(%rsp), %rsi
         call find_array_assignment_by_identifier
         movq %rax, %rdi
-        push $69 # stride
-        push $69 # count
+        push $69 # type
+        push $69 # count int
         push $69 # identifier descriptor
         push $69 # identifier id
         call retrieve_array_assignment
@@ -554,18 +544,18 @@ visit_statement:
         # Eval index
         movq 32(%rsp), %rdi
         movq 40(%rsp), %rsi
-        pop %rax # stride
+        pop %rax # type
         pop %rbx # offset
         addq $32, %rsp # Remove the array access stuff
         push %rbx # offset
-        push %rax # stride
+        push %rax # type
         call visit_expression
         
         call emit_pop
         call emit_rax
         call emit_mov
         call emit_dollar
-        pop %rdi # Stride
+        pop %rdi # type
         call emit_number
         call emit_comma
         call emit_rdx
@@ -1035,7 +1025,7 @@ emit_load_array_access:
         movq 8(%rsp), %rdi # Token descriptor
         call find_array_assignment_by_identifier
         movq %rax, %rdi
-        push $696969 # Stride
+        push $696969 # type
         push $696969 # count
         push $696969 # Identifier desc
         push $696969 # Identifier id
@@ -1044,7 +1034,7 @@ emit_load_array_access:
         pop %rax
         pop %rsi # identifier id
         pop %rdi # identifier token
-        push %rax # Stride
+        push %rax # type
         call get_offset_on_stack
         cltq
         movq $8, %rdx
@@ -1059,7 +1049,7 @@ emit_load_array_access:
         call emit_rax
         call emit_mov
         call emit_dollar
-        movq 8(%rsp), %rdi # Stride
+        movq 8(%rsp), %rdi # type //TODO! Fix me
         call emit_number
         call emit_comma
         call emit_rdx

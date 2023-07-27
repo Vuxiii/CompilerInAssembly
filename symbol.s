@@ -11,7 +11,7 @@
 
 
 _current_symbol_count_:         .int 0
-_current_stack_offset_:         .int 8
+_current_stack_offset_:         .int 0
 _current_function:              .int 0
 
 .section .text
@@ -232,56 +232,41 @@ symbol_loop:
 
 .type symbol_array_assignment, @function
 symbol_array_assignment:
-        push %rbp
-        movq %rsp, %rbp
+        enter $16, $0
+        //  -8(%rbp)  -> identifier descriptor
+        // -16(%rbp)  -> Count
 
         # We want to ensure that we offset enough on the stack.
         
         movq %rsi, %rdi
-        push $696969 # stride
+        push $696969 # type
         push $696969 # count
         push $696969 # identifier descriptor
         push $696969 # identifier id
         call retrieve_array_assignment
-        # Check if it is an identifier or a struct
         
         pop %rdi # id type
-        cmp $38, %rdi
-        je symbol_array_assignment_struct
-        pop %rdi # descriptor
-        call set_offset_on_stack
-        call decrease_symbol_count
+        cmp $24, %rdi
+        jne emit_expected_identifier
 
-        pop %rdi # Count
-        call retrieve_number
-        movq %rax, %rdi
-        call increase_symbol_count_by
-        leave
-        ret
-    symbol_array_assignment_struct:
-        pop %rdi # descriptor
-        push $696969 # variable name descriptor
-        push $696969 # struct descriptor
-        call retrieve_struct_instance
-        movq 8(%rsp), %rdi # Variable name descriptor
-        call set_offset_on_stack
-        call decrease_symbol_count
+        pop %rax
+        movq %rax, -8(%rbp)
+        pop %rax
+        movq %rax, -16(%rbp)
 
-        pop %rdi # struct descriptor.
-        addq $8, %rsp
-        push $696969 # field descriptor
-        push $696969 # count
-        push $696969 # name
-        call retrieve_struct_decl
-        addq $8, %rsp
-        pop %rdx # Count
-    breakhere1:
-        addq $8, %rsp
-        movq (%rsp), %rax # stride
-        imulq %rdx        # Count
-        
-        movq %rax, %rdi
-        call increase_symbol_count_by
+        pop %rdi
+        push $696969 # type descriptor
+        push $696969 # type id
+        push $696969 # size int
+        push $696969 # Char *name
+        call retrieve_type
+        movq 8(%rsp), %rax          # Stride of each element
+        addq $32, %rsp
+        movq -16(%rbp), %rdx        # Count elements in array
+        imulq %rdx
+        movq %rax, %rsi             # Total size of the array
+        movq -8(%rbp), %rdi
+        call set_offset_on_stack
 
         leave
         ret
@@ -500,11 +485,14 @@ set_offset_on_stack:
         jne already_inserted
         movq %rax, -24(%rbp)
 
+        call increase_symbol_count
+
         movq -8(%rbp), %rdi
         call retrieve_identifier
         movq -24(%rbp), %rbx
         movq %rax, (%rbx)
         call get_stack_offset
+        addq $8, %rax
         movl %eax, 8(%rbx)
         
         movq -16(%rbp), %rdi
@@ -563,45 +551,6 @@ get_offset_on_stack:
         call get_relative_offset_for_field
         addq -24(%rbp), %rax
         leave
-        leave
-        ret
-
-
-        movq %rax, %r11
-        
-        movq -8(%rbp), %rdi
-        call locate_symbol
-        movl 8(%rax), %r13d # The base offset
-
-        movq -8(%rbp), %rdi
-        
-        # Find the correct struct type by name
-        call find_struct_type_by_name
-        movq %rax, %rdi
-        push $696969
-        push $696969
-        push $696969
-        call retrieve_struct_decl
-        pop %rdi # name descriptor
-        pop %rdi # field count
-        pop %rdi # field descriptor *
-        # Count the offset for the field in the struct decl.
-    add_offset_loop:
-        push %rdi
-        movl (%rdi), %edi
-        call retrieve_identifier
-        movq %rax, %rsi
-        movq %r11, %rdi
-        call cmp_string
-        cmp $1, %rax
-        je found_correct_offset
-        pop %rdi
-        addq $4, %rdi
-        add $1, %r13d
-        jne add_offset_loop
-    found_correct_offset:
-        mov %r13d, %eax
-        cltq
         leave
         ret
 
@@ -832,7 +781,7 @@ set_symbol_count:
         movq $32, %rdx
         mulq %rdx
         mov %rax, %rbx # Offset
-        call get_symbol_count
+        call get_stack_offset
         mov %eax, %ecx
         lea function_buffer(%rip), %rax
         movl %ecx, 12(%rax, %rbx)

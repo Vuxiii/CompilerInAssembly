@@ -28,9 +28,9 @@
 .global token_none
         token_none:       .asciz "None"  # 0
 .global token_def
-        token_def:        .asciz "def"   # 1
+        token_def:        .asciz "def "   # 1
 .global token_if
-        token_if:         .asciz "if"    # 2
+        token_if:         .asciz "if "    # 2
 .global token_equals
         token_equals:     .asciz "=="    # 3
 .global token_assignment
@@ -48,7 +48,7 @@
 .global token_rbracket
         token_rbracket:   .asciz "]"     # 10
 .global token_print
-        token_print:      .asciz "print" # 11
+        token_print:      .asciz "print" # 11 NOT USED
 .global token_while
         token_while:      .asciz "while" # 12
 .global token_plus
@@ -90,7 +90,7 @@
 .global token_loopii
         token_loopii:     .asciz "loop"  # 49
 .global token_return
-        token_return:     .asciz "return"# 50
+        token_return:     .asciz "return "# 50
 .global token_arrow
         token_arrow:      .asciz "->"    # 52
 .global token_int
@@ -98,9 +98,9 @@
 .global token_double
         token_double:     .asciz "double"# 55 NOT USED
 .global token_void
-        token_void:       .asciz "void"  # 56
+        token_void:       .asciz "void "  # 56
 .global token_let
-        token_let:        .asciz "let"   # 57
+        token_let:        .asciz "let "   # 57
 .global token_colon
         token_colon:      .asciz ":"     # 58
 .global token_coloneq
@@ -357,4 +357,10 @@ error_declaration_not_found: .asciz "Declaration not found!\n"
 
 .global error_struct_field_not_found
 error_struct_field_not_found: .asciz "Struct field not found!\n"
+
+.global error_expected_identifier
+error_expected_identifier: .asciz "Expected an identifier!\n"
+
+.global error_unknown_type
+error_unknown_type: .asciz "Unknown type!\n"
 

@@ -85,20 +85,16 @@ cmp_string_:
     movb (%rsi), %bl
     xor %bl, %al
 
-    // Check if we have reached '\0'
-    cmp $0, %bl
-    je cmp_string_true
-
-
     // Check if they are equal.
     cmp $0, %al 
     jne cmp_string_false
-
+    
+    // Check if we have reached '\0'
+    cmp $0, %bl
+    je cmp_string_true
     inc %rdi
     inc %rsi
-    // Go to next byte
     jmp cmp_string_
-
 cmp_string_false:
     movq $0, %rax
     ret

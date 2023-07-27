@@ -140,10 +140,6 @@ parse_statement:
         je if_statement_
         cmp $12, %rax
         je while_statement_
-        cmp $21, %rax
-        je struct_statement_
-        cmp $11, %rax
-        je print_statement_
         cmp $49, %rax
         je loop_statement_
         cmp $50, %rax
@@ -210,12 +206,6 @@ parse_statement:
         push %rbx
         jmp check_statement_list
         
-    struct_statement_:
-        call struct_statement
-        push %rax
-        push %rbx
-        jmp check_statement_list
-
     while_statement_:
         call while_statement
         push %rax
@@ -248,6 +238,15 @@ parse_statement:
         # Or an assignment
         call next_token
         # current_token_id: identifier
+
+        call current_token_data
+        movq %rax, %rdi
+        call retrieve_identifier
+        movq %rax, %rdi
+        movq $token_print, %rsi
+        call cmp_string
+        je print_statement_
+
         call peek_token_id
         cmp $5, %rax # We are dealing with a function call
         je function_call_
@@ -273,6 +272,14 @@ parse_statement:
 // out rbx: token descriptor
 .type declaration_statement, @function
 declaration_statement:
+    # The following cases are possible
+    # Case [1]   'let' 'identifier' ':' 'identifier'
+    # Case [2]   'let' 'identifier' ':' 'identifier' '=' expression
+    # Case [3]   'let' 'identifier' ':=' expression
+    # Case [4]   'let' 'identifier' ':' '[' 'number' ']' 'identifier'
+    # Case [5]   'let' 'identifier' '::' 'identifier'
+    # Case [6]   'let' 'identifier' '::' 'struct' '{' arg_list '}'
+        
         enter $24, $0
         #  -8(%rbp)  -> variable name descriptor
         # -16(%rbp)  -> variable name type
@@ -284,13 +291,13 @@ declaration_statement:
 
         call peek_token_id
         cmp $24, %rax
-        jne error_parse_expected_identifier
+        jne emit_parse_error_expected_identifier
 
         call next_token
         # Current: 'identifier'
         call current_token_data
         movq %rax, -8(%rbp) # The name for the variable
-        
+        movq $24, -16(%rbp)
         call peek_token_id
         cmp $58, %rax #  ':'    colon
         je declaration_statement_determine_type
@@ -298,23 +305,7 @@ declaration_statement:
         je declaration_statement_typeinfer_assign
         cmp $60, %rax # '::'    doublecolon
         je declaration_statement_new_type
-        cmp $37, %rax #  '.'    dot
-        jne emit_parse_error_unexpected_token
-        movq $36, -16(%rbp) # type is field_access
-    declaration_statement_field_start:
-        call next_token
-        # Current: '.' dot
-        call peek_token_id
-        cmp $24, %rax
-        jne emit_parse_error_expected_identifier
-        call next_token
-        # Current: 'identifier'
-        call current_token_data
-        movq %rax, %rsi
-        movq -8(%rbp), %rdi
-        call construct_field_access_node
-        movq %rax, -8(%rbp)
-        //TODO! Add recursive call here for nested field_access.
+        jmp emit_parse_error_unexpected_token
     declaration_statement_determine_type:
         call peek_token_id
         cmp $58, %rax
@@ -323,6 +314,8 @@ declaration_statement:
         call next_token
         # Current: ':'
         call peek_token_id
+        cmp $9, %rax # '['
+        je declaration_statement_array
         cmp $24, %rax
         jne emit_parse_error_expected_identifier
 
@@ -335,6 +328,7 @@ declaration_statement:
         cmp $4, %rax
         jne declaration_statement_construct_declaration
     declaration_statement_assign:
+    # Case [2]
         call next_token
         # Current: '='
         call parse_expression
@@ -350,7 +344,48 @@ declaration_statement:
         movq $62, %rax
         leave
         ret
+    declaration_statement_array:
+    # Case [4]
+        call next_token
+        # Current '['
+        call parse_expression
+        cmp $25, %rax
+        jne error_parse_expected_number
+        movq %rbx, %rdi
+        call retrieve_number
+        push %rax                # Amount of elements in array
+        call peek_token_id
+        cmp $10, %rax
+        jne emit_parse_error_missing_rbracket
+
+        call next_token
+        # Current: ']'
+        
+        call peek_token_id
+        cmp $24, %rax
+        jne emit_parse_error_expected_identifier
+
+        call next_token
+        # Current: 'identifier'
+        call current_token_data
+        push %rax
+
+        # Determine the type from the identifier.
+        pop %rdi
+        call retrieve_identifier
+        movq %rax, %rdi
+        call find_type_by_charptr
+        movq %rax, %rcx
+        pop %rdx
+        movq -8(%rbp), %rsi
+        movq -16(%rbp), %rdi
+        call construct_array_assignment
+        movq %rax, %rbx
+        movq $40, %rax
+        leave
+        ret
     declaration_statement_construct_declaration:
+    # Case [1]
         movq  -8(%rbp), %rdi
         movq -24(%rbp), %rsi
         call construct_declaration
@@ -359,6 +394,8 @@ declaration_statement:
         leave
         ret
     declaration_statement_typeinfer_assign:
+    # Case [3]
+    // TODO! Implement me
         jmp emit_not_implemented
         leave
         ret
@@ -370,7 +407,7 @@ declaration_statement:
         je declaration_statement_type_alias
         cmp $21, %rax #'struct'
         jne emit_parse_error_unexpected_token
-
+    # Case [6]
         call next_token
         # Current: 'struct'
         call peek_token_id
@@ -419,6 +456,8 @@ declaration_statement:
         leave
         ret
     declaration_statement_type_alias:
+    # Case [5]
+    // TODO! Implement me
         jmp emit_not_implemented
         leave
         ret
@@ -1023,158 +1062,10 @@ while_statement:
 
 // out rax: token id
 // out rbx: token descriptor
-.type struct_statement, @function
-struct_statement:
-        push %rbp
-        movq %rsp, %rbp
-        # We need to determine if this is a struct declaration or an assignment
-        # We do this by checking for the number og identifiers token
-        # [1]: A single identifier -> declaration
-        # [2]: Two identifiers -> instance
-
-        # eat the struct
-        call next_token
-        # eat the first identifier
-        call next_token
-        
-        call current_token_id
-        cmp $24, %rax
-        jne emit_parse_error_expected_identifier
-
-        # Is the next token an '{' or an 'identifier'
-        call peek_token_id
-        cmp $24, %rax
-        je struct_instance
-    struct_declaration:
-        # This is a struct declaration
-        # Store the identifier for the struct definition
-        call current_token_data
-        movq %rax, %r10
-
-
-        # Parse the identifiers seperated by ','
-        # Count the number of identifiers
-        xor %r8, %r8
-    struct_field_count:
-        inc %r8
-        # We have: current -> Identifier
-        #          peek    -> ',' or '}'
-
-        # eat the seperator: '{' ',' '}'
-        call next_token
-        call peek_token_id # Just to check....
-        call peek_token_data
-        push %rax # Store the field descriptor
-
-        call next_token
-
-        call peek_token_id
-        cmp $35, %rax
-        je struct_field_count 
-
-        # eat the '}'
-        call next_token
-
-        call current_token_id
-        cmp $8, %rax
-        jne emit_parse_error_missing_rcurly
-
-        # We have length in r8
-        # We have each field identifier on the stack
-        # We can load the address of the stack, and pass it to the constructor method
-        mov %r10, %rdi
-        leaq (%rsp), %rsi
-        mov %r8, %rdx
-        call construct_struct_decl_node
-        push $33
-        push %rax
-        movq %rax, %rsi
-        movq %r10, %rdi
-        call construct_struct_type
-        
-        pop %rbx
-        pop %rax
-        leave
-        ret    
-    struct_instance:
-        # This is an struct instance
-
-        call current_token_data
-        movq %rax, %rdi # struct name
-        # Find the descriptor
-        call find_struct_type_by_name
-        push %rax
-        movq %rax, %rdi
-
-        call peek_token_data
-        movq %rax, %rsi # variable name
-        call construct_struct_instance
-        push $38
-        push %rax
-
-        call next_token # Eat the variable name
-        
-        # Check if it is an array
-        call peek_token_id
-        cmp $9, %rax
-        je struct_instance_array
-
-        pop %rbx
-        pop %rax
-        leave
-        ret
-    struct_instance_array:
-        call next_token
-        # Current: '['
-
-        call current_token_id
-        cmp $9, %rax
-        jne emit_parse_error_missing_lbracket
-
-
-        call parse_expression
-        push %rbx # The number of elements. MUST be number
-
-        call next_token
-        # Current: ']'
-
-        call current_token_id
-        cmp $10, %rax
-        jne emit_parse_error_missing_rbracket
-
-        # We need to find he stride and the count
-        movq 24(%rsp), %rdi
-        push $696969
-        push $696969 # count
-        push $696969
-        call retrieve_struct_decl
-        addq $8, %rsp
-        pop %rax
-        addq $8, %rsp
-        movq $8, %rdx
-        imulq %rdx
-        
-        pop %rdi        # Count descriptor
-        push %rax
-        call retrieve_number
-        movq %rax, %rdx # Count
-        pop %rcx        # stride
-        pop %rsi        # descriptor
-        pop %rdi        # type
-        call construct_array_assignment
-        movq %rax, %rbx
-        movq $40, %rax
-        leave
-        ret
-
-// out rax: token id
-// out rbx: token descriptor
 .type print_statement, @function
 print_statement:
         push %rbp
         movq %rsp, %rbp
-        # Move the 'print' token to current
-        call next_token
         
         # Move the '(' token to current
         call next_token
@@ -1989,10 +1880,11 @@ construct_type:
         ret
 
 
+// TODO! Ensure that all the places stride is referenced are updated to the new type
 // in rdi: identifier type
 // in rsi: identifier descriptor
-// in rdx: count SHOULD THIS BE INT ONLY
-// in rcx: stride
+// in rdx: count int
+// in rcx: type descriptor
 // out:    token descriptor
 .type construct_array_assignment, @function
 construct_array_assignment:
@@ -2693,17 +2585,16 @@ retrieve_array_assignment:
 // out rax: stride in bytes
 .type retrieve_stride_from_identifier, @function
 .global retrieve_stride_from_identifier
-retrieve_stride_from_identifier:
+retrieve_stride_from_identifier: //TODO! Needs to get refactored.
         push %rbp
         movq %rsp, %rbp
 
         lea array_assignment_buffer(%rip), %rax
 
         movl (%rax), %ebx
-        cmp $38, %ebx # Structc instance
-        je retrieve_stride_from_struct
         cmp $24, %ebx # variable
-        je retrieve_stride_from_ident
+        jne emit_expected_identifier
+
         movq $error_array_assignment_, %rdi
         jmp emit_storage_error_unknown_id___
     retrieve_stride_from_struct:
@@ -2896,7 +2787,7 @@ find_type_by_charptr:
 
     find_type_by_charptr_loop:
         cmp $0, (%rsi)
-        je find_type_by_charptr_type_not_found
+        je emit_unknown_type
 
         movq (%rsi), %rsi # Hay
         call cmp_string
@@ -2909,10 +2800,6 @@ find_type_by_charptr:
         movq -24(%rbp), %rdi # Needle
         jmp find_type_by_charptr_loop
     
-    find_type_by_charptr_type_not_found:
-        movq $-1, %rax
-        leave
-        ret
     find_type_by_charptr_found_type:
         movq -8(%rbp), %rax
         leave

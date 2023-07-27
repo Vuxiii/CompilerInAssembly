@@ -156,7 +156,7 @@ array_assignment: size = 16
     ident->type: token_id
     ident->desc: descriptor
     count:       int
-    stride:      int
+    type->desc:  descriptor
 
 array_access: size = 16
     type: 41
@@ -262,7 +262,7 @@ addressof_buffer: size = 8
     [(expr_type, expr_descriptor),...]
 
 array_assignment_buffer: size = 16
-    [(ident_type, ident_descriptor, count, stride),...]
+    [(ident_type, ident_descriptor, count, type_descriptor),...]
 
 array_access_buffer: size = 16
     [(ident_type, ident_descriptor, index_type, index_descriptor),...]
