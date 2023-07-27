@@ -221,7 +221,29 @@ identify_token:
         movq $3, %rcx
         repe cmpsb
         je return_def_token
+
+        movq %rdx, %rdi
+        movq $token_let, %rsi
+        movq $3, %rcx
+        repe cmpsb
+        je return_let_token
+
+        movq %rdx, %rdi
+        movq $token_doublecolon, %rsi
+        cmpsw
+        je return_doublecolon_token
         
+        movq %rdx, %rdi
+        movq $token_colon, %rsi
+        cmpsb
+        je return_colon_token
+
+        movq %rdx, %rdi
+        movq $token_coloneq, %rsi
+        cmpsw
+        je return_coloneq_token
+
+
         movq %rdx, %rdi
         movq $token_if, %rsi
         cmpsw
@@ -238,17 +260,17 @@ identify_token:
         cmpsw
         je return_equals_token
 
-        movq %rdx, %rdi
-        movq $token_int, %rsi
-        movq $3, %rcx
-        repe cmpsb
-        je return_int_token
+        // movq %rdx, %rdi
+        // movq $token_int, %rsi
+        // movq $3, %rcx
+        // repe cmpsb
+        // je return_int_token
 
-        movq %rdx, %rdi
-        movq $token_double, %rsi
-        movq $6, %rcx
-        repe cmpsb
-        je return_double_token
+        // movq %rdx, %rdi
+        // movq $token_double, %rsi
+        // movq $6, %rcx
+        // repe cmpsb
+        // je return_double_token
 
         movq %rdx, %rdi
         movq $token_void, %rsi
@@ -406,6 +428,30 @@ identify_token:
 
             movq $0, %rbx
             movq $1, %rax
+            ret
+        return_let_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $57, %rax
+            ret
+        return_colon_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $58, %rax
+            ret
+        return_coloneq_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $59, %rax
+            ret
+        return_doublecolon_token:
+            movq %rdi, (buffer_address)(%rip)
+
+            movq $0, %rbx
+            movq $60, %rax
             ret
         return_int_token:
             movq %rdi, (buffer_address)(%rip)

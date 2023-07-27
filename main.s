@@ -5,18 +5,18 @@ _start:
         mov %rsp, %rbp
 
         # Setup types
-        movq $0, %rsi
         lea token_void(%rip), %rdi
+        movq $0, %rsi
         movq $0, %rdx
         movq $0, %rcx
         call construct_type
-        movq $8, %rsi
         lea token_int(%rip), %rdi
+        movq $8, %rsi
         movq $0, %rdx
         movq $0, %rcx
         call construct_type
-        movq $8, %rsi
         lea token_double(%rip), %rdi
+        movq $8, %rsi
         movq $0, %rdx
         movq $0, %rcx
         call construct_type
@@ -47,7 +47,7 @@ _start:
         movq %rbx, %rsi
         push %rdi
         push %rsi
-        // call astprint
+        call setup_types
         pop %rsi
         pop %rdi
         push %rdi

@@ -137,7 +137,7 @@ array_expr: size = 4
     count:       descriptor
 
 field_access: size = 8
-    type: 36
+    type: 36 # TODO! Add a struct type for nested field_access
     struct name: descriptor
     field:       descriptor
 
@@ -209,8 +209,36 @@ type: size = 20
     type->id:     token_id
     type->desc:   descriptor
 
+declaration: size = 8
+    type: 61
+    name_ident:   descriptor
+    type_ident:   descriptor
+
+declaration_assign: size = 16
+    type: 62
+    name_ident:   descriptor
+    type_ident:   descriptor
+    expr_type:    token_id
+    expr_desc:    descriptor
+
+declaration: size = 8
+    type: 63
+    name_ident:   descriptor
+    type_ident:   descriptor
+
+struct_field: size = 8
+    type: 64
+    field_ident:   descriptor
+    type_ident:    descriptor
+
+declaration: size = 8
+    [(name_ident, type_ident),...]
+
+declaration_assign: size = 16
+    [(name_ident, type_ident, expr_type, expr_desc),...]
+
 type: size = 20
-    [(name_char_ptr, size, type_id, type_descriptor)]
+    [(name_char_ptr, size, type_id, type_descriptor),...]
 
 return: size = 8
     [(expression_type, expression_descriptor),...]

@@ -108,6 +108,27 @@ visit_statement:
         je visit_function_call
         cmp $49, %rdi
         je visit_loop
+        cmp $62, %rdi
+        je visit_declaration_assign
+        cmp $63, %rdi
+        je visit_declaration
+        leave
+        ret
+    visit_declaration:
+        # Do nothing
+        leave
+        ret
+    visit_declaration_assign:
+        movq %rsi, %rdi
+        push $696969 # Value descriptor
+        push $696969 # Value type
+        push $696969 # Name descriptor
+        push $696969 # name id
+        call retrieve_declaration_assign
+        movq (%rsp), %rax
+        movq %rax, 8(%rsp)
+        movq $24, (%rsp)
+        jmp visit_assignment_stack_init_done
         leave
         ret
     visit_loop:
@@ -399,8 +420,8 @@ visit_statement:
         addq $8, %rsp # Remove the arg descriptor *
         movq 16(%rsp), %rax # var count
         
-        movq $8, %rdx
-        imulq %rdx
+        // movq $8, %rdx
+        // imulq %rdx
         movq %rax, %rdi
         call emit_number
         call emit_comma
@@ -441,7 +462,7 @@ visit_statement:
         push $696969 # identifier id
         movq %rsi, %rdi
         call retrieve_assignment
-
+    visit_assignment_stack_init_done:
         # Evaluate the destination first.
         # Needs to be done for array access.
         # a[expr]
@@ -1117,9 +1138,6 @@ emit_var:
         mov %rsp, %rbp
 
         call get_offset_on_stack
-        movq $8, %rdx
-        imulq %rdx
-        
         movq %rax, %rdi
         push %rdi
         call emit_minus

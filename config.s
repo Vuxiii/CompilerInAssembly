@@ -94,11 +94,19 @@
 .global token_arrow
         token_arrow:      .asciz "->"    # 52
 .global token_int
-        token_int:        .asciz "int"   # 54
+        token_int:        .asciz "int"   # 54 NOT USED
 .global token_double
-        token_double:     .asciz "double"# 55
+        token_double:     .asciz "double"# 55 NOT USED
 .global token_void
         token_void:       .asciz "void"  # 56
+.global token_let
+        token_let:        .asciz "let"   # 57
+.global token_colon
+        token_colon:      .asciz ":"     # 58
+.global token_coloneq
+        token_coloneq:    .asciz ":="    # 59
+.global token_doublecolon
+        token_doublecolon:.asciz "::"    # 60
 
 .global number_0
         number_0:   .asciz "0" # value: 48
@@ -314,6 +322,12 @@
 
 .global error_unexpected_expr_expected_lvalue
         error_unexpected_expr_expected_lvalue: .asciz "Unexpected expression. Expected an lvalue.\n"
+
+.global error_unexpected_token
+        error_unexpected_token: .asciz "Unexpected Token.\n"
+
+.global error_expected_colon
+        error_expected_colon: .asciz "Expected a Colon ':'.\n"
 
 .global error_unexpected_deref
     error_unexpected_deref: .asciz "Unexpected deref.\n"

@@ -130,3 +130,19 @@ emit_file_not_found:
         
     movq $error_file_not_found, %rdi
     jmp emit_parse_error_exit
+
+
+.type emit_parse_error_unexpected_token, @function
+.global emit_parse_error_unexpected_token
+emit_parse_error_unexpected_token:
+        
+    movq $error_unexpected_token, %rdi
+    jmp emit_parse_error_exit
+
+
+.type emit_parse_error_expected_colon, @function
+.global emit_parse_error_expected_colon
+emit_parse_error_expected_colon:
+        
+    movq $error_expected_colon, %rdi
+    jmp emit_parse_error_exit

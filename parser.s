@@ -26,6 +26,10 @@ _token_data_:                   .int 0
 _peek_data_:                    .int 0
 
 
+.global declaration_buffer
+        declaration_buffer:       .space 1024
+.global declaration_assign_buffer
+        declaration_assign_buffer:.space 1024
 .global loop_buffer
         loop_buffer:             .space 1024
 .global return_buffer
@@ -89,7 +93,10 @@ arg_list_offset:                .int 1 # For functions with no args
 loop_offset:                    .int 0
 return_offset:                  .int 0
 type_offset:                    .int 0
+declaration_assign_offset:      .int 0
+declaration_offset:             .int 0
 
+.global type_offset
 .global function_offset
         function_offset:        .int 0
 
@@ -139,6 +146,8 @@ parse_statement:
         je loop_statement_
         cmp $50, %rax
         je return_statement_
+        cmp $57, %rax
+        je declaration_statement_
     node_is_not_statement:
         movq $0, %rax # None
         leave
@@ -175,6 +184,12 @@ parse_statement:
         movq $28, %rax
         leave
         ret
+    declaration_statement_:
+        call declaration_statement
+        push %rax
+        push %rbx
+        jmp check_statement_list
+
     return_statement_:
         call return_statement
         push %rax
@@ -251,6 +266,194 @@ parse_statement:
         push %rbx # descriptor
         jmp check_statement_list
 
+
+// out rax: token id
+// out rbx: token descriptor
+.type declaration_statement, @function
+declaration_statement:
+        enter $24, $0
+        #  -8(%rbp)  -> variable name descriptor
+        # -16(%rbp)  -> variable name type
+        # -24(%rbp)  -> type identifier descriptor
+        # -32(%rbp)  -> value descriptor
+        # -40(%rbp)  -> value type
+        call next_token
+        # Current: 'let'
+
+        call peek_token_id
+        cmp $24, %rax
+        jne error_parse_expected_identifier
+
+        call next_token
+        # Current: 'identifier'
+        call current_token_data
+        movq %rax, -8(%rbp) # The name for the variable
+        
+        call peek_token_id
+        cmp $58, %rax #  ':'    colon
+        je declaration_statement_determine_type
+        cmp $59, %rax #  ':='   coloneq
+        je declaration_statement_typeinfer_assign
+        cmp $60, %rax # '::'    doublecolon
+        je declaration_statement_new_type
+        cmp $37, %rax #  '.'    dot
+        jne emit_parse_error_unexpected_token
+        movq $36, -16(%rbp) # type is field_access
+    declaration_statement_field_start:
+        call next_token
+        # Current: '.' dot
+        call peek_token_id
+        cmp $24, %rax
+        jne emit_parse_error_expected_identifier
+        call next_token
+        # Current: 'identifier'
+        call current_token_data
+        movq %rax, %rsi
+        movq -8(%rbp), %rdi
+        call construct_field_access_node
+        movq %rax, -8(%rbp)
+        //TODO! Add recursive call here for nested field_access.
+    declaration_statement_determine_type:
+        call peek_token_id
+        cmp $58, %rax
+        jne emit_parse_error_expected_colon
+
+        call next_token
+        # Current: ':'
+        call peek_token_id
+        cmp $24, %rax
+        jne emit_parse_error_expected_identifier
+
+        call next_token
+        # Current: 'identifier'
+        call current_token_data
+        movq %rax, -24(%rbp)
+
+        call peek_token_id
+        cmp $4, %rax
+        jne declaration_statement_construct_declaration
+    declaration_statement_assign:
+        call next_token
+        # Current: '='
+        call parse_expression
+        movq %rax, -40(%rbp)
+        movq %rbx, -32(%rbp)
+    declaration_statement_construct_declaration_with_assign:
+        movq  -8(%rbp), %rdi
+        movq -24(%rbp), %rsi
+        movq -40(%rbp), %rdx
+        movq -32(%rbp), %rcx
+        call construct_declaration_assign
+        movq %rax, %rbx
+        movq $62, %rax
+        leave
+        ret
+    declaration_statement_construct_declaration:
+        movq  -8(%rbp), %rdi
+        movq -24(%rbp), %rsi
+        call construct_declaration
+        movq %rax, %rbx
+        movq $63, %rax
+        leave
+        ret
+    declaration_statement_typeinfer_assign:
+        jmp emit_not_implemented
+        leave
+        ret
+    declaration_statement_new_type:
+        call next_token
+        # Current: '::' doublecolon
+        call peek_token_id
+        cmp $24, %rax
+        je declaration_statement_type_alias
+        cmp $21, %rax #'struct'
+        jne emit_parse_error_unexpected_token
+
+        call next_token
+        # Current: 'struct'
+        call peek_token_id
+        cmp $7, %rax # '{'
+        jne error_parse_missing_lcurly
+
+        
+        xor %r8, %r8
+        declaration_statement_new_type_parse_fields:
+        call next_token
+        # Current: '{' or | ','
+        call parse_struct_field
+        push %rbx
+        inc %r8
+        call peek_token_id
+        cmp $35, %rax # ','
+        je declaration_statement_new_type_parse_fields
+        # We are done
+        call peek_token_id
+        cmp $8, %rax # '}'
+        jne emit_parse_error_missing_rcurly
+        call next_token
+
+        # The stack is full of struct_fields descriptors
+        # Construct the struct
+        movq %r8, %rdx
+        movq -8(%rbp), %rdi
+        lea (%rsp), %rsi
+        shl $3, %r8
+        addq %r8, %rsi
+        call construct_struct_decl_node
+        push %rax
+        push $33
+
+        
+        movq -8(%rbp), %rdi
+        call retrieve_identifier
+        movq %rax, %rdi
+        xor %rsi, %rsi          # typechecker.s will determine the size
+        movq (%rsp), %rdx
+        movq 8(%rsp), %rcx
+        call construct_type
+        pop %rax
+        pop %rbx
+        leave
+        ret
+    declaration_statement_type_alias:
+        jmp emit_not_implemented
+        leave
+        ret
+
+.type parse_struct_field, @function
+parse_struct_field:
+        enter $16, $0
+        //  -8(%rbp)  -> name descriptor
+        // -16(%rbp)  -> type descriptor
+        call peek_token_id
+        cmp $24, %rax
+        jne emit_parse_error_expected_identifier
+        call next_token
+        call current_token_data
+        movq %rax, -8(%rbp)
+
+        call peek_token_id
+        cmp $58, %rax
+        jne error_expected_colon
+
+        call next_token
+        # Current: ':'
+        
+        call peek_token_id
+        cmp $24, %rax
+        jne emit_parse_error_expected_identifier
+
+        call next_token
+        call current_token_data
+        movq %rax, -16(%rbp)
+
+        movq -8(%rbp), %rdi
+        movq -16(%rbp), %rsi
+        call construct_declaration
+        movq %rax, %rbx
+        movq $63, %rax
+        leave
+        ret
 
 // out rax: token id
 // out rbx: token descriptor
@@ -679,14 +882,12 @@ function_declaration:
         # Current: '->'
 
         call peek_token_id
-        cmp $54, %rax
+        cmp $24, %rax
         jne emit_not_implemented
-    vvvvvv:
-        // call peek_token_data
-        // movq %rax, %rdi
-        // call retrieve_identifier
-        // movq %rax, %rdi
-        lea token_int(%rip), %rdi
+        call current_token_data
+        movq %rax, %rdi
+        call retrieve_identifier
+        movq %rax, %rdi
         call find_type_by_charptr
         movq %rax, (%rsp)        # Replace the type
         
@@ -816,6 +1017,7 @@ while_statement:
         movq $32, %rax
         leave
         ret
+
 // out rax: token id
 // out rbx: token descriptor
 .type struct_statement, @function
@@ -874,7 +1076,7 @@ struct_statement:
         cmp $8, %rax
         jne emit_parse_error_missing_rcurly
 
-        # We have length in rcx
+        # We have length in r8
         # We have each field identifier on the stack
         # We can load the address of the stack, and pass it to the constructor method
         mov %r10, %rdi
@@ -1468,6 +1670,65 @@ construct_loop:
         
         leave
         ret
+
+// in rdi: name descriptor
+// in rsi: type descriptor
+// out rax: token descriptor
+.global construct_declaration
+.type construct_declaration, @function
+construct_declaration:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov declaration_offset(%rip), %eax
+        push %rax
+        push %rdx
+        
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+        pop %rdx
+
+        lea declaration_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+
+        pop %rax
+        incl (declaration_offset)(%rip)
+        
+        leave
+        ret
+// in rdi: name descriptor
+// in rsi: type descriptor
+// in rdx: expression type
+// in rcx: expression descriptor
+// out rax: token descriptor
+.global construct_declaration_assign
+.type construct_declaration_assign, @function
+construct_declaration_assign:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov declaration_assign_offset(%rip), %eax
+        push %rax
+        push %rdx
+        
+        movq $16, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+        pop %rdx
+
+        lea declaration_assign_buffer(%rip), %rax
+        mov %edi,   (%rax, %rbx)
+        mov %esi,  4(%rax, %rbx)
+        mov %edx,  8(%rax, %rbx)
+        mov %ecx, 12(%rax, %rbx)
+
+        pop %rax
+        incl (declaration_assign_offset)(%rip)
+        
+        leave
+        ret
 // in rdi: count
 // in rsi: arg descriptor[]
 // out rax: token descriptor
@@ -1943,7 +2204,7 @@ construct_struct_decl_node:
     struct_insert_loop_begin:
         mov (%rsi), %edi
         mov %edi, (%rax)
-        addq $8, %rsi # 64 bit (stack)
+        subq $8, %rsi # 64 bit (stack)
         addq $4, %rax # 32 bit (array)
         dec %rdx
         test %rdx, %rdx
@@ -2115,6 +2376,60 @@ retrieve_loop:
         mov %rax, %rbx
 
         lea loop_buffer(%rip), %rax
+        addq %rbx, %rax
+        mov   (%rax), %edi
+        mov  4(%rax), %esi
+        mov  8(%rax), %edx
+        mov 12(%rax), %ecx
+        
+        mov %edi, 16(%rbp)
+        mov %rsi, 24(%rbp)
+        mov %edx, 32(%rbp)
+        mov %ecx, 40(%rbp)
+
+        leave
+        ret
+// in rdi: Token descriptor
+// out 16(%rbp): name descriptor
+// out 24(%rbp): type descriptor
+.global retrieve_declaration
+.type retrieve_declaration, @function
+retrieve_declaration:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov %rdi, %rax
+        movq $8, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea declaration_buffer(%rip), %rax
+        addq %rbx, %rax
+        mov   (%rax), %edi
+        mov  4(%rax), %esi
+        
+        mov %edi, 16(%rbp)
+        mov %rsi, 24(%rbp)
+
+        leave
+        ret
+// in rdi: Token descriptor
+// out 16(%rbp): name descriptor
+// out 24(%rbp): type descriptor
+// out 32(%rbp): value type
+// out 40(%rbp): value descriptor
+.global retrieve_declaration_assign
+.type retrieve_declaration_assign, @function
+retrieve_declaration_assign:
+        push %rbp
+        movq %rsp, %rbp
+
+        mov %rdi, %rax
+        movq $16, %rdx
+        mulq %rdx
+        mov %rax, %rbx
+
+        lea declaration_assign_buffer(%rip), %rax
         addq %rbx, %rax
         mov   (%rax), %edi
         mov  4(%rax), %esi

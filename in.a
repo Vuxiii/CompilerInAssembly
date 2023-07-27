@@ -1,6 +1,7 @@
 def main() {
-    fib(1)
-} 
+    let Point :: struct { x: int, y: int }
+    let p: Point
+} EOP
 
 def fib() -> int {
     f1 = 0
@@ -17,6 +18,10 @@ def fib() -> int {
 
 EOP
 
+let a: int
+
+let Point :: struct { x, y }
+let p1 : Point
 
 STRUCTS
 

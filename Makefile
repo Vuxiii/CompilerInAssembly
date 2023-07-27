@@ -1,5 +1,5 @@
-main: main.o lexer.o config.o utils.o parser.o symbol.o emitter.o astprint.o errors.o
-	ld -g -o main main.o lexer.o parser.o symbol.o emitter.o config.o utils.o errors.o astprint.o
+main: main.o lexer.o config.o utils.o parser.o symbol.o typechecker.o emitter.o astprint.o errors.o
+	ld -g -o main main.o lexer.o parser.o symbol.o typechecker.o emitter.o config.o utils.o errors.o astprint.o
 
 main.o: main.s
 	as -ggdb main.s -o main.o
@@ -18,6 +18,9 @@ symbol.o: symbol.s
 
 emitter.o: emitter.s
 	as -ggdb emitter.s -o emitter.o
+
+typechecker.o: typechecker.s
+	as -ggdb typechecker.s -o typechecker.o
 
 astprint.o: astprint.s
 	as -ggdb astprint.s -o astprint.o

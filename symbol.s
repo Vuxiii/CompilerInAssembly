@@ -104,6 +104,10 @@ symbol_check_statement_kind:
         je symbol_check_call_array_assignment
         cmp $49, %rdi
         je symbol_check_call_loop
+        cmp $62, %rdi
+        je symbol_check_call_declaration_assign
+        cmp $63, %rdi
+        je symbol_check_call_declaration
 
         # Found nothing. Return...
         jmp symbol_check_statement_kind_end
@@ -131,7 +135,79 @@ symbol_check_statement_kind:
     symbol_check_call_loop:
         call symbol_loop
         jmp symbol_check_statement_kind_end
+    symbol_check_call_declaration_assign:
+        call symbol_declaration_assign
+        jmp symbol_check_statement_kind_end
+    symbol_check_call_declaration:
+        call symbol_declaration
+        jmp symbol_check_statement_kind_end
     symbol_check_statement_kind_end:
+        leave
+        ret
+
+.type symbol_declaration, @function
+symbol_declaration:
+        enter $16, $0
+        //  -8(%rbp)  -> identifier descriptor
+        // -16(%rbp)  -> size of identifier int
+        movq %rsi, %rdi
+        push $696969 # type descriptor
+        push $696969 # Name descriptor
+        call retrieve_declaration
+        
+        pop %rax
+        movq %rax, -8(%rbp)
+
+        pop %rdi
+        call retrieve_identifier
+        movq %rax, %rdi
+        call find_type_by_charptr
+        movq %rax, %rdi
+        push $696969 # type descriptor
+        push $696969 # type id
+        push $696969 # size int
+        push $696969 # name char*
+        call retrieve_type
+        movq 8(%rsp), %rax
+        movq %rax, -16(%rbp)
+
+        movq  -8(%rbp), %rdi
+        movq -16(%rbp), %rsi
+        call set_offset_on_stack
+        leave
+        ret
+
+.type symbol_declaration_assign, @function
+symbol_declaration_assign:
+        enter $16, $0
+        //  -8(%rbp)  -> identifier descriptor
+        // -16(%rbp)  -> size of identifier int
+        movq %rsi, %rdi
+        push $696969 # Value descriptor
+        push $696969 # Value type
+        push $696969 # type descriptor
+        push $696969 # Name descriptor
+        call retrieve_declaration_assign
+        
+        movq (%rsp), %rax
+        movq %rax, -8(%rbp)
+
+        movq 8(%rsp), %rdi
+        call retrieve_identifier
+        movq %rax, %rdi
+        call find_type_by_charptr
+        movq %rax, %rdi
+        push $696969 # type descriptor
+        push $696969 # type id
+        push $696969 # size int
+        push $696969 # name char*
+        call retrieve_type
+        movq 8(%rsp), %rax
+        movq %rax, -16(%rbp)
+
+        movq  -8(%rbp), %rdi
+        movq -16(%rbp), %rsi
+        call set_offset_on_stack
         leave
         ret
 
@@ -406,25 +482,29 @@ locate_symbol:
         ret
 
 // in rdi: The descriptor for the identifier
+// in rsi: The size of the identifier int
 .type set_offset_on_stack, @function
 set_offset_on_stack:
-        push %rbp
-        mov %rsp, %rbp
+        enter $24, $0
+        //  -8(%rbp)  -> identifier descriptor
+        // -16(%rbp)  -> size of identifier int
+        // -24(%rbp)  -> address in symboltable for identifier
+        movq %rdi,  -8(%rbp)
+        movq %rsi, -16(%rbp)
+        
         # We can use the fact that locate_symbol returns an empty spot if it doesn't exist in the table
-        push %rdi
         call locate_symbol
-        pop %rdi
         # Check if it already is in there.
         cmpl $0, (%rax)
         jne already_inserted
+        movq %rax, -24(%rbp)
 
-        call increase_symbol_count
-        push %rax
+        movq -16(%rbp), %rdi
+        call increase_symbol_count_by
+        movq -8(%rbp), %rdi
         call retrieve_identifier
-        movq %rax, %rdi
-        pop %rax
-        movq %rdi, (%rax)
-        movq %rax, %rbx
+        movq -24(%rbp), %rbx
+        movq %rax, (%rbx)
         call get_symbol_count
         movl %eax, 8(%rbx)
     already_inserted:
