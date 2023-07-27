@@ -146,3 +146,24 @@ emit_parse_error_expected_colon:
         
     movq $error_expected_colon, %rdi
     jmp emit_parse_error_exit
+
+.type emit_struct_declaration_not_found, @function
+.global emit_struct_declaration_not_found
+emit_struct_declaration_not_found:
+        
+    movq $error_struct_declaration_not_found, %rdi
+    jmp emit_parse_error_exit
+
+.type emit_declaration_not_found, @function
+.global emit_declaration_not_found
+emit_declaration_not_found:
+        
+    movq $error_declaration_not_found, %rdi
+    jmp emit_parse_error_exit
+
+.type emit_struct_field_not_found, @function
+.global emit_struct_field_not_found
+emit_struct_field_not_found:
+        
+    movq $error_struct_field_not_found, %rdi
+    jmp emit_parse_error_exit

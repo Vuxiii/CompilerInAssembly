@@ -11,6 +11,7 @@
 
 
 _current_symbol_count_:         .int 0
+_current_stack_offset_:         .int 8
 _current_function:              .int 0
 
 .section .text
@@ -499,14 +500,15 @@ set_offset_on_stack:
         jne already_inserted
         movq %rax, -24(%rbp)
 
-        movq -16(%rbp), %rdi
-        call increase_symbol_count_by
         movq -8(%rbp), %rdi
         call retrieve_identifier
         movq -24(%rbp), %rbx
         movq %rax, (%rbx)
-        call get_symbol_count
+        call get_stack_offset
         movl %eax, 8(%rbx)
+        
+        movq -16(%rbp), %rdi
+        call increase_stack_offset_by
     already_inserted:
         leave
         ret
@@ -529,20 +531,49 @@ get_offset_on_stack:
     get_field_offset:
         # Step [1]: Locate the symbol
         # Step [2]: Locate the field offset
-        push $696969
-        push $696969
+        enter $24, $0
+        //  -8(%rbp)  -> field descriptor
+        // -16(%rbp)  -> variable descriptor
+        // -24(%rbp)  -> Base offset int
+        push $696969 # field descriptor
+        push $696969 # variable descriptor
         call retrieve_field_access
-        pop %rsi # field descriptor
-        pop %rdi # variable descriptor
-        push %rsi
-        call retrieve_identifier
+        pop %rdi 
+        pop %rsi 
+        movq %rsi,  -8(%rbp)
+        movq %rdi, -16(%rbp)
+
+        # Base offset
+        movq -16(%rbp), %rdi
+        call locate_symbol
+        movl 8(%rax), %eax
+        cltq # Sign extend. (remove the top 32 bits rax)
+        movq %rax, -24(%rbp)
+
+        # Relative offset
+        movq -16(%rbp), %rdi
+        call find_declaration_by_name
+        movq %rax, %rdi
+        push $696969 # Type descriptor
+        push $696969 # Name descriptor
+        call retrieve_declaration
+        addq $8, %rsp
+        pop %rdi
+        movq -8(%rbp), %rsi
+        call get_relative_offset_for_field
+        addq -24(%rbp), %rax
+        leave
+        leave
+        ret
+
+
         movq %rax, %r11
         
-        pop %rdi
-        push %rdi
+        movq -8(%rbp), %rdi
         call locate_symbol
         movl 8(%rax), %r13d # The base offset
-        pop %rdi
+
+        movq -8(%rbp), %rdi
         
         # Find the correct struct type by name
         call find_struct_type_by_name
@@ -574,6 +605,167 @@ get_offset_on_stack:
         leave
         ret
 
+
+// in rdi: variable name descriptor
+.type find_declaration_by_name, @function
+.global find_declaration_by_name
+find_declaration_by_name:
+        enter $24, $0
+        //  -8(%rbp)  -> variable name char *
+        // -16(%rbp)  -> Current declaration pointer
+        // -24(%rbp)  -> End declaration pointer
+        call retrieve_identifier
+        movq %rax, -8(%rbp)
+
+        lea declaration_buffer(%rip), %rax
+        movq %rax, -16(%rbp)
+        movl declaration_offset(%rip), %ebx
+        shl $3, %rbx
+        addq %rax, %rbx
+        movq %rbx, -24(%rbp)
+
+    find_declaration_by_name_next_declaration:
+        movq -16(%rbp), %rax
+        cmpq %rax, -24(%rax)
+        je error_declaration_not_found
+        addq $8, -16(%rbp)
+
+        movl (%rax), %edi
+        call retrieve_identifier
+        movq %rax, %rdi
+        movq -8(%rbp), %rsi
+        call cmp_string
+        cmp $0, %ax
+        je find_declaration_by_name_next_declaration
+    find_declaration_by_name_found_declaration:
+        movq -16(%rbp), %rax
+        subq $8, %rax
+        lea declaration_buffer(%rip), %rbx
+        subq %rbx, %rax
+        shr $3, %rax
+        leave
+        ret
+
+
+// in rdi: struct name descriptor
+// in rsi: field name descriptor
+.type get_relative_offset_for_field, @function
+.global get_relative_offset_for_field
+get_relative_offset_for_field:
+        enter $40, $0
+        //  -8(%rbp)  -> struct name descriptor
+        // -16(%rbp)  -> field name char *
+        // -24(%rbp)  -> field count in struct
+        // -32(%rbp)  -> Current Field Descriptor
+        // -40(%rbp)  -> Total relative Offset
+        movq %rdi, -8(%rbp)
+
+        movq %rsi, %rdi
+        call retrieve_identifier
+        movq %rax, -16(%rbp)
+
+        movq -8(%rbp), %rdi
+        call find_struct_declaration_by_name
+        movq %rax, %rdi
+        push $696969 # Field descriptor *
+        push $696969 # field count
+        push $696969 # struct name descriptor
+        call retrieve_struct_decl
+
+        addq $8, %rsp # Remove the name. We don't need it
+        pop %rax
+        movq %rax, -24(%rbp)
+        pop %rax
+        movq %rax, -32(%rbp)
+        movq $0, -40(%rbp)
+
+    get_relative_offset_for_field_next_field:
+        cmpq $0, -24(%rbp)
+        je emit_struct_field_not_found
+        decq -24(%rbp)          # We have visited this field
+        movq -32(%rbp), %rax
+        addq $4, -32(%rbp)      # Progress to next field pointer
+
+        movl (%rax), %edi
+        push $696969 # Type descriptor
+        push $696969 # Name descriptor
+        call retrieve_declaration
+        pop %rdi
+        call retrieve_identifier
+        movq %rax, %rdi
+        movq -16(%rbp), %rsi
+        call cmp_string
+        cmp $1, %ax
+        je get_relative_offset_for_field_found_size
+        pop %rdi
+        call lookup_type_size
+        addq %rax, -40(%rbp)
+        jmp get_relative_offset_for_field_next_field
+    get_relative_offset_for_field_found_size:
+        movq -40(%rbp), %rax
+        leave
+        ret
+
+// in  rdi: struct name descriptor
+// out rax: struct descriptor
+.type find_struct_declaration_by_name, @function
+.global find_struct_declaration_by_name
+find_struct_declaration_by_name:
+        enter $24, $0
+        //  -8(%rbp)  -> struct name char *
+        // -16(%rbp)  -> Struct End Pointer
+        // -24(%rbp)  -> Current Struct Pointer
+        call retrieve_identifier
+        movq %rax, -8(%rbp)
+
+        # Setup
+        movl struct_offset(%rip), %eax
+        movq $4, %rdx
+        imulq %rdx
+        movq %rax, %rbx
+        lea struct_buffer(%rip), %rax
+        addq %rax, %rbx
+        movq %rbx, -16(%rbp)
+        movq %rax, -24(%rbp)
+
+        # Fetch the struct
+        next_struct:
+            movq -24(%rbp), %rax
+        # Check if we have reached the end pointer.
+        # If we have. return error. The struct was not found
+            cmpq -16(%rbp), %rax
+            jge emit_struct_declaration_not_found
+            push %rax
+        # Update current struct pointer such that it points to the next struct
+            movl 4(%rax), %eax
+            addq $4, %rax
+            movq $4, %rdx
+            imulq %rdx
+            addq %rax, -24(%rbp)
+            pop %rax
+            
+            push %rax # Store the current struct pointer
+            
+            movl (%rax), %edi
+            call retrieve_identifier
+            movq %rax, %rsi
+            movq -8(%rbp), %rdi
+            call cmp_string
+            cmp $1, %ax
+            pop %rax # Restore current struct pointer.
+            jne next_struct
+        # We have found the struct.
+        # Convert the pointer into a descriptor
+        # We do this by dividing by 4, or rsh by 2
+        # with the current address - base address
+
+        lea struct_buffer(%rip), %rbx
+        subq %rbx, %rax
+        shr $2, %rax
+        vvvvvvv:
+
+        leave
+        ret
 
 // in rdi: the descriptor of the identifier
 // Im kinda assumning that it fills with zeros......
@@ -685,11 +877,7 @@ reset_symbol_count:
 increase_symbol_count:
         push %rbp
         mov %rsp, %rbp
-        push %rax
-        movl _current_symbol_count_(%rip), %eax
-        inc %eax
-        movl %eax, _current_symbol_count_(%rip)
-        pop %rax
+        incl _current_symbol_count_(%rip)
         leave
         ret
 
@@ -697,11 +885,7 @@ increase_symbol_count:
 decrease_symbol_count:
         push %rbp
         mov %rsp, %rbp
-        push %rax
-        movl _current_symbol_count_(%rip), %eax
-        dec %eax
-        movl %eax, _current_symbol_count_(%rip)
-        pop %rax
+        decl _current_symbol_count_(%rip)
         leave
         ret
 
@@ -710,10 +894,33 @@ decrease_symbol_count:
 increase_symbol_count_by:
         push %rbp
         mov %rsp, %rbp
-        push %rax
-        movl _current_symbol_count_(%rip), %eax
-        addl %edi, %eax
-        movl %eax, _current_symbol_count_(%rip)
-        pop %rax
+        addl %edi, _current_symbol_count_(%rip)
+        leave
+        ret
+
+// out eax: The current symbol count
+.type get_stack_offset, @function
+get_stack_offset:
+        push %rbp
+        mov %rsp, %rbp
+        movl _current_stack_offset_(%rip), %eax
+        cltq
+        leave
+        ret
+
+.type reset_stack_offset, @function
+reset_stack_offset:
+        push %rbp
+        mov %rsp, %rbp
+        movl $8, _current_stack_offset_(%rip)
+        leave
+        ret
+
+// in rdi: amount to increase by
+.type increase_stack_offset_by, @function
+increase_stack_offset_by:
+        push %rbp
+        mov %rsp, %rbp
+        addl %edi, _current_stack_offset_(%rip)
         leave
         ret

@@ -77,11 +77,21 @@ setup_types:
         leave
         ret
 
-.type lookup_size, @function
-lookup_size:
+// rdi: type name descriptor
+.global lookup_type_size
+.type lookup_type_size, @function
+lookup_type_size:
         enter $0, $0
+        call retrieve_identifier
+        movq %rax, %rdi
+        call find_type_by_charptr
+        movq %rax, %rdi
+        push $696969 # type_descriptor
+        push $696969 # type id
+        push $696969 # size int
+        push $696969 # Char *name
+        call retrieve_type
 
-        # hmmm
-
+        movq 8(%rsp), %rax
         leave
         ret

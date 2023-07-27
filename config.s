@@ -349,3 +349,12 @@
 .global error_storage_error
 error_storage_error: .asciz "Error in the datastructure for: "
 
+.global error_struct_declaration_not_found
+error_struct_declaration_not_found: .asciz "Struct declaration not found!\n"
+
+.global error_declaration_not_found
+error_declaration_not_found: .asciz "Declaration not found!\n"
+
+.global error_struct_field_not_found
+error_struct_field_not_found: .asciz "Struct field not found!\n"
+

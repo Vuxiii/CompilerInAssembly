@@ -96,6 +96,8 @@ type_offset:                    .int 0
 declaration_assign_offset:      .int 0
 declaration_offset:             .int 0
 
+.global declaration_offset
+.global struct_offset
 .global type_offset
 .global function_offset
         function_offset:        .int 0
@@ -397,6 +399,7 @@ declaration_statement:
         movq %r8, %rdx
         movq -8(%rbp), %rdi
         lea (%rsp), %rsi
+        dec %r8
         shl $3, %r8
         addq %r8, %rsi
         call construct_struct_decl_node

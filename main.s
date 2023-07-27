@@ -7,17 +7,17 @@ _start:
         # Setup types
         lea token_void(%rip), %rdi
         movq $0, %rsi
-        movq $0, %rdx
+        movq $24, %rdx
         movq $0, %rcx
         call construct_type
         lea token_int(%rip), %rdi
         movq $8, %rsi
-        movq $0, %rdx
+        movq $24, %rdx
         movq $0, %rcx
         call construct_type
         lea token_double(%rip), %rdi
         movq $8, %rsi
-        movq $0, %rdx
+        movq $24, %rdx
         movq $0, %rcx
         call construct_type
 
@@ -53,6 +53,11 @@ _start:
         push %rdi
         push %rsi
         call collect
+
+        movq $5, %rdi
+        movq $17, %rsi
+        call get_relative_offset_for_field
+
         pop %rsi
         pop %rdi
         call emit
