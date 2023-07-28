@@ -24,7 +24,13 @@ The `parser` is just like the `lexer`. It (the parser) compares `tokens` and ass
 The output of the `parser` is the top-level node containing the entire AST of the program. `rax` contains the node id while `rbx` contains the descriptor for that node.
 
 ## Types
-The file `typechecker.s` traverses through the `Types` data structure to find any "incomplete" types. These are types which physical sizes cannot be computed on construction. For example: `let Line :: struct { p1: Point, p2: Point } let Point :: struct { x: int, y: int }`, here the parser will first construcct the `Line` struct, however all it sees for its types are two identifiers `Point`. For that reason the typechecker is run after the parsing phase is over. 
+The file `typechecker.s` traverses through the `Types` data structure to find any "incomplete" types. These are types which physical sizes cannot be computed on construction. 
+For example: 
+```
+let Line :: struct { p1: Point, p2: Point } 
+let Point :: struct { x: int, y: int }
+```
+ here the parser will first construcct the `Line` struct, however all it sees for its types are two identifiers `Point`. For that reason the typechecker is run after the parsing phase is over. 
 
 ## Symbols
 The job of the `symbol.s` file is to map each variable to a place on the stack. The first variable it enconters gets the first position on the stack `-8(%rbp)`. The next available spot on the stack is then computed by adding the size of the variable to the stack offset counter. 
@@ -32,7 +38,12 @@ The job of the `symbol.s` file is to map each variable to a place on the stack. 
 If it is a 32 bit integer for example, the next available spot would be `-12(%rbp)`. 
 ### Structs
 For structs the base offset for the identifier is computed and allocated. For each access to one of its fields a relative offset is computed at compiletime and added to the baseoffset.
-The following example: `let Point :: struct { x: int, y: int } let p: Point`, would set the base offset for the variable `p` to `-8(%rbp)`. Field `x` would have relative offset `0` while `y` would have `8`. The final offset for the following symbol `p.y` is `base_offset + relative_offset('y', Point)` = `-(8+8)` = `-16`.
+The following example: 
+```
+let Point :: struct { x: int, y: int }
+let p: Point
+```
+ would set the base offset for the variable `p` to `-8(%rbp)`. Field `x` would have relative offset `0` while `y` would have `8`. The final offset for the following symbol `p.y` is `base_offset('p') + relative_offset('y', Point)` = `-(8+8)` = `-16`.
 ### Arrays
 For arrays we just follow the principles of the two above statements. However, this time we compute the stride of the type and multiply it with the length of the array.
 For example: `let points: [10] Point`, creates 10 `Point`s on the stack. To do this efficiently we find the stride of a single `Point` which is computed in the `Types-phase`, in this example it is two integers so `16`. Because we are creating ten `Point`s we use a total of `160` bytes on the stack.
