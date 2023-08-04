@@ -285,6 +285,10 @@ visit_statement:
         push $696969
         push $696969
         call retrieve_if
+
+        call emit_newline
+        call emit_comment_enter_guard
+
         pop %rdi
         pop %rsi
         call visit_expression
@@ -310,10 +314,17 @@ visit_statement:
         push %rax 
         call emit_number
 
+        call emit_newline
+        call emit_comment_leaving_guard
+        call emit_newline
+        call emit_comment_enter_body
+
         pop %rdi
         pop %rsi
         call visit_statement
         
+        call emit_comment_leaving_body
+
         # Insert the end of body label
         call emit_newline
         call emit_if
@@ -335,6 +346,9 @@ visit_statement:
         push %rdi
         call emit_number
         call emit_colon
+
+        call emit_newline
+        call emit_comment_enter_guard
         
         pop %rdi
         push %rdi
@@ -347,6 +361,7 @@ visit_statement:
         pop %rdi
         pop %rsi
         call visit_expression
+
 
 
         call emit_pop
@@ -369,10 +384,18 @@ visit_statement:
         push %rax 
         call emit_number
 
+
+        call emit_newline
+        call emit_comment_leaving_guard
+        call emit_newline
+        call emit_comment_enter_body
+
         pop %rdi
         pop %rsi
         call visit_statement
         
+        call emit_comment_leaving_body
+
         # Insert jump to enter-guard label
         call emit_jmp
         call emit_guard
@@ -1851,3 +1874,50 @@ emit_guard:
         syscall
         leave
         ret
+.type emit_comment_enter_body, @function
+emit_comment_enter_body:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_comment_enter_body, %rsi
+        movq $18, %rdx
+        syscall
+        leave
+        ret
+.type emit_comment_leaving_body, @function
+emit_comment_leaving_body:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_comment_leaving_body, %rsi
+        movq $17, %rdx
+        syscall
+        leave
+        ret
+
+.type emit_comment_enter_guard, @function
+emit_comment_enter_guard:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_comment_enter_guard, %rsi
+        movq $19, %rdx
+        syscall
+        leave
+        ret
+.type emit_comment_leaving_guard, @function
+emit_comment_leaving_guard:
+        push %rbp
+        mov %rsp, %rbp 
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_comment_leaving_guard, %rsi
+        movq $18, %rdx
+        syscall
+        leave
+        ret
+
+

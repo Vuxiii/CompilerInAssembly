@@ -1,6 +1,8 @@
 def main() {
     let Point :: struct {x: int, y: int}
-
+    while (true) {
+        print(1)
+    }
     let a: int = 2
     print(a)
 } EOP

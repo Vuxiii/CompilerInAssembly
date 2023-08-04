@@ -30,7 +30,7 @@
 .global token_def
         token_def:        .asciz "def "   # 1
 .global token_if
-        token_if:         .asciz "if "    # 2
+        token_if:         .asciz "if"    # 2
 .global token_equals
         token_equals:     .asciz "=="    # 3
 .global token_assignment
@@ -281,6 +281,19 @@
 .global _astprint_array_access
         _astprint_array_access: .asciz "ArrayAccess:"
 
+
+# -- [[ COMMENTS ]] --
+.global _emit_comment_enter_body
+        _emit_comment_enter_body:   .asciz "\t\t\t# Entering Body"
+
+.global _emit_comment_leaving_body
+        _emit_comment_leaving_body: .asciz "\t\t\t# Leaving Body"
+
+.global _emit_comment_enter_guard
+        _emit_comment_enter_guard:   .asciz "\t\t\t# Entering Guard"
+
+.global _emit_comment_leaving_guard
+        _emit_comment_leaving_guard: .asciz "\t\t\t# Leaving Guard"
 
 # -- [[ ERROR MESSAGES ]] --
 

@@ -2786,7 +2786,7 @@ find_type_by_charptr:
         movq %rdi, -24(%rbp) # Needle
 
     find_type_by_charptr_loop:
-        cmp $0, (%rsi)
+        cmpl $0, (%rsi)
         je emit_unknown_type
 
         movq (%rsi), %rsi # Hay

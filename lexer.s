@@ -244,7 +244,7 @@ identify_token:
 
         movq %rdx, %rdi
         movq $token_if, %rsi
-        movq $3, %rcx
+        movq $2, %rcx
         repe cmpsb
         je return_if_token
 
@@ -401,7 +401,7 @@ identify_token:
         je return_deref_token
 
         
-
+    return_not_keyword:
         movq $0, %rbx
         movq $0, %rax
         ret
@@ -467,6 +467,8 @@ identify_token:
             movq $50, %rax
             ret
         return_if_token:
+            call is_char
+            jne return_not_keyword
             movq %rdi, (buffer_address)(%rip)
 
             movq $0, %rbx
