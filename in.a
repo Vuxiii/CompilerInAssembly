@@ -1,7 +1,7 @@
 def main() {
     let Point :: struct {x: int, y: int}
-    let p1: Point
-    let p2: Point
+    let p1: int
+    let p2: int
     p2 = p1
 } EOP
 

@@ -963,7 +963,7 @@ visit_expression:
             cmpq $0, -8(%rbp) 
             jg identifier_struct_push_field
             leave
-            
+
         call emit_newline
         
         leave
@@ -986,6 +986,7 @@ visit_expression:
         call emit_rax
         call emit_push
         call emit_rax
+        leave
         leave
         ret
 
