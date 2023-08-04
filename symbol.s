@@ -597,8 +597,28 @@ find_declaration_by_name:
         ret
 
 
-// in rdi: struct name descriptor
-// in rsi: field name descriptor
+// in rdi: variable name descriptor
+// out   : type descriptor
+.type find_type_by_name, @function
+.global find_type_by_name
+find_type_by_name:
+        enter $0, $0
+        call find_declaration_by_name
+        movq %rax, %rdi
+        push $696969 # type descriptor
+        push $696969 # name descriptor
+        call retrieve_declaration
+        addq $8, %rsp
+        pop %rdi
+        call retrieve_identifier
+        movq %rax, %rdi
+        call find_type_by_charptr
+        leave
+        ret
+
+
+// in  rdi: struct name descriptor
+// in  rsi: field name descriptor
 // out rax: the relative offset from the base offset
 .type get_relative_offset_for_field, @function
 .global get_relative_offset_for_field

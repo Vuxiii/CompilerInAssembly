@@ -468,11 +468,17 @@ visit_statement:
         ret
 
     visit_assignment:
-        // subq $24, %rsp
-        push $696969 # expression descriptor
-        push $696969 # expression id
-        push $696969 # identifier descriptor
-        push $696969 # identifier id
+        enter $40, $0
+        #  -8(%rbp) -> base offset on the stack
+        # -16(%rbp) -> expression descriptor
+        # -24(%rbp) -> expression id
+        # -32(%rbp) -> identifier descriptor
+        # -40(%rbp) -> identifier id
+        movq $0,  -8(%rbp)
+        movq $0, -16(%rbp)
+        movq $0, -24(%rbp)
+        movq $0, -32(%rbp)
+        movq $0, -40(%rbp)
         movq %rsi, %rdi
         call retrieve_assignment
     visit_assignment_stack_init_done:
@@ -480,21 +486,108 @@ visit_statement:
         # Needs to be done for array access.
         # a[expr]
 
-        movq (%rsp), %rdi
+        movq -40(%rbp), %rsi
+        movq -32(%rbp), %rdi
+        call get_offset_on_stack
+        movq %rax, -8(%rbp)
+
+        movq -40(%rbp), %rdi
         cmp $41, %rdi # Array Access
         je visit_assignment_array_access
 
         
         
         # Eval the right side
-        movq 16(%rsp), %rdi
-        movq 24(%rsp), %rsi
+        movq -24(%rbp), %rdi
+        movq -16(%rbp), %rsi
         call visit_expression
+        # At this point we need to determine what we are dealing with
+        # It could either be a primitive
+        # Or it could be a struct
 
+        movq -40(%rbp), %rdi
+        cmp $36, %rdi # Array Access
+        je assignment_primitive
+
+        movq -32(%rbp), %rdi
+        call find_type_by_name
+        movq %rax, %rdi
+        push $696969 # type descriptor
+        push $696969 # type id
+        push $696969 # size int
+        push $696969 # char *name
+        call retrieve_type
+
+        cmpq $0, 16(%rsp)
+        je assignment_primitive
+    assignment_struct:
+        # At this point we are dealing wit ha struct
+        movq 24(%rsp), %rdi
+        push $696969 # field descriptor *
+        push $696969 # field count
+        push $696969 # struct name descriptor
+        call retrieve_struct_decl
+        movq (%rsp), %rdi
+        movq %rdi, -32(%rbp)
+        movq 16(%rsp), %rdi # field descriptor *
+        movq  8(%rsp), %rsi # Count
+
+            enter $16, $1
+            #  -8(%rbp) -> count
+            # -16(%rbp) -> current field descriptor *
+            movq %rsi,  -8(%rbp)
+            movq %rdi, -16(%rbp)
+        assignment_struct_pop_into_field:
+            movq -16(%rbp), %rdi
+            movl (%rdi), %edi
+            decq -8(%rbp)       # Decrease the counter
+            addq $4, -16(%rbp)  # Progress to the next descriptor
+            push $696969        # type descriptor
+            push $696969        # name descriptor
+            call retrieve_declaration
+
+            call emit_pop
+            call emit_rax
+            call emit_mov
+            call emit_rax
+            call emit_comma
+            call emit_minus
+            
+            pop %rsi
+            addq $8, %rsp
+            movq (%rbp),    %rdi
+            movq -32(%rdi), %rdi
+            call get_relative_offset_for_field
+            
+            # Load the base offset
+            movq (%rbp), %rdi
+            movq -8(%rdi), %rdi
+            addq %rax, %rdi
+            call emit_number
+
+            call emit_lparen
+            call emit_rbp
+            call emit_rparen
+            
+            cmpq $0, -8(%rbp) 
+            jg assignment_struct_pop_into_field
+            leave
+        leave
+        leave
+        ret
+
+    assignment_primitive:
+        # Here we can decide on the correct move isntruction,
+        # depending on the size of the target
+
+        # However, for now we just ignore it.
+        //TODO! Futureproof with correct move instructions.
         call emit_pop
         call emit_rax
 
-        movq (%rsp), %rsi
+
+
+        movq -40(%rbp), %rsi
         # Check if we have a deref
         cmp $44, %rsi
         je visit_assignment_deref
@@ -511,6 +604,7 @@ visit_statement:
 
         call emit_newline
 
+        leave
         leave
         ret
 
@@ -637,7 +731,7 @@ visit_expression:
         cmp $24, %rdi # identifier
         je identifier
         cmp $36, %rdi # field
-        je identifier
+        je field
         cmp $41, %rdi # array access
         je array_access
         cmp $43, %rdi # addressof
@@ -882,16 +976,7 @@ visit_expression:
         movq %rax, -24(%rbp)
 
         movq -8(%rbp), %rdi
-        call find_declaration_by_name
-        movq %rax, %rdi
-        push $696969 # type descriptor
-        push $696969 # name descriptor
-        call retrieve_declaration
-        addq $8, %rsp
-        pop %rdi
-        call retrieve_identifier
-        movq %rax, %rdi
-        call find_type_by_charptr
+        call find_type_by_name
         movq %rax, %rdi
         push $696969 # type descriptor
         push $696969 # type id
@@ -921,6 +1006,7 @@ visit_expression:
             #  -8(%rbp) -> count
             # -16(%rbp) -> current field descriptor *
             movq %rsi,  -8(%rbp)
+            decq %rsi
 
             # Reverse order
             shl $2, %rsi
@@ -929,11 +1015,11 @@ visit_expression:
             movq %rdi, -16(%rbp)
         identifier_struct_push_field:
             movq -16(%rbp), %rdi
-            movq (%rdi), %rdi
-            subq $1,  -8(%rbp) # Decrease the counter
-            subq $4, -16(%rbp) # Progress to the next descriptor
-            push $696969 # type descriptor
-            push $696969 # name descriptor
+            movl (%rdi), %edi
+            decq -8(%rbp)       # Decrease the counter
+            subq $4, -16(%rbp)  # Progress to the next descriptor
+            push $696969        # type descriptor
+            push $696969        # name descriptor
             call retrieve_declaration
 
             //TODO! Futureproof with correct move instruction.
@@ -946,6 +1032,8 @@ visit_expression:
             movq (%rbp), %rdi
             movq -8(%rdi), %rdi
             call get_relative_offset_for_field
+            
+            # Load the base offset
             movq (%rbp), %rdi
             movq -24(%rdi), %rdi
             addq %rax, %rdi
