@@ -1,8 +1,7 @@
 def main() {
-    let Point :: struct {x: int, y: int}
-    let points: [2] Point
+    let numbers: [2] int
     
-    points[0].x = 69
+    numbers[0] = 0
     
 } EOP
 

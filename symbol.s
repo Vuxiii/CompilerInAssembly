@@ -506,8 +506,7 @@ set_offset_on_stack:
 .global get_offset_on_stack
 .type get_offset_on_stack, @function
 get_offset_on_stack:
-        push %rbp
-        mov %rsp, %rbp
+        enter $0, $0
         cmp $36, %rsi
         je get_field_offset
 

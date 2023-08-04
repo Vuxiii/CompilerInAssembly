@@ -490,6 +490,9 @@ visit_statement:
 
         movq -40(%rbp), %rsi
         movq -32(%rbp), %rdi
+        cmp $41, %rsi # array access
+        je visit_assignment_array_access
+
         call get_offset_on_stack
         movq %rax, -8(%rbp)
 
