@@ -34,7 +34,11 @@ errors.o: errors.s
 phony: clean run crun
 
 clean:
-	rm *.o main code.s code tests/out/*.actual 2> /dev/null
+	find . -name '*.o' -delete
+	find . -name 'main' -delete
+	find . -name 'code.s' -delete
+	find . -name 'code' -delete
+	find . -name '*.actual' -delete
 
 
 run:	
