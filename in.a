@@ -1,14 +1,8 @@
 def main() {
-    let Point :: struct {x: int, y: int, z: int}
-    let p1: Point
-    let p2: Point
-    p1.x = 69
-    p1.y = 42
-    p2 = p1
-    print(p1.x)
-    print(p1.y)
-    print(p2.x)
-    print(p2.y)
+    let Point :: struct {x: int, y: int}
+    let points: [2] Point
+    
+    
 } EOP
 
 def fib() -> int {

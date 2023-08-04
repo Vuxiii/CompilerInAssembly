@@ -613,6 +613,65 @@ function_call:
         leave
         ret
 
+
+// out rax: token id
+// out rbx: token descriptor
+.type parse_field_access, @function
+parse_field_access:
+        enter $16, $0
+        #  -8(%rbp) -> left id
+        # -16(%rbp) -> left descriptor
+        
+        call current_token_id
+        movq %rax,  -8(%rbp) # Store the left id
+        call current_token_data
+        movq %rax, -16(%rbp) # Store the left descriptor
+        
+    parse_field_access_try_parse_right:
+        call peek_token_id
+        cmp $9, %rax
+        je parse_field_access_left_array_access
+        cmp $37, %rax
+        jne parse_field_access_return_left
+    
+        call next_token
+        # Current: '.'
+        call next_token
+        # Current: identifier
+
+        call parse_field_access
+        movq %rax, %rdx
+        movq %rbx, %rcx
+        movq  -8(%rbp), %rdi
+        movq -16(%rbp), %rsi
+        
+        call construct_field_access_node
+        movq %rax, %rbx
+        movq $36,  %rax
+        leave
+        ret
+    parse_field_access_left_array_access:
+        call next_token
+        # Current: '['
+
+        call parse_expression
+        movq %rax, %rdx
+        movq %rbx, %rcx
+        movq  -8(%rbp), %rdi
+        movq -16(%rbp), %rsi
+        call construct_array_access
+        movq %rax, -16(%rbp) # Store the left descriptor
+        movq $41,   -8(%rbp)
+        call next_token
+        # Current: ']'
+        jmp parse_field_access_try_parse_right
+    parse_field_access_return_left:
+        movq  -8(%rbp), %rax
+        movq -16(%rbp), %rbx
+        leave
+        ret
+
+
 // in  rdi: bool wrap identifier in deref
 // out rax: token id
 // out rbx: token descriptor
@@ -674,21 +733,12 @@ assignment:
         leave
         ret
     assignment_field_acces:
-        call current_token_data
-        push %rax # Store the variable descriptor
-        # Peek has '.'
-        call next_token
+        call parse_field_access
 
-        call peek_token_data
-        push %rax # Store the field descriptor
 
-        pop %rsi
-        pop %rdi
-        call construct_field_access_node
-        push $36
-        push %rax
-        call next_token
-        # Current: 'identifier'
+
+
+        
         // TODO! Check peek for '[' or '='
 
         call peek_token_id
@@ -1975,8 +2025,10 @@ construct_assignment_node:
         leave
         ret
 
-// in rdi: variable descriptor
-// in rsi: field descriptor
+// in rdi: left  id
+// in rsi: left  descriptor
+// in rdx: right id
+// in rcx: right descriptor
 // out:    field_access descriptor
 .type construct_field_access_node, @function
 construct_field_access_node:
@@ -1988,7 +2040,7 @@ construct_field_access_node:
         mov field_access_offset(%rip), %eax
         push %rax # Store so we can return the descriptor
         push %rdx # mulq uses rdx...
-        movq $8, %rdx # Size of field_access (8 bytes)
+        movq $16, %rdx # Size of field_access (16 bytes)
         mulq %rdx
         mov %rax, %rbx
         pop %rdx
@@ -1997,6 +2049,8 @@ construct_field_access_node:
         lea field_access_buffer(%rip), %rax
         mov %edi,   (%rax, %rbx)
         mov %esi,  4(%rax, %rbx)
+        mov %edx,  8(%rax, %rbx)
+        mov %ecx, 12(%rax, %rbx)
 
         pop %rax # Restore descriptor
         incl (field_access_offset)(%rip)
@@ -2974,26 +3028,32 @@ retrieve_struct_decl:
         ret
 
 // in rdi: token descriptor
-// out 16(%rbp): var descriptor
-// out 24(%rbp): field descriptor
+// out 16(%rbp): left  id
+// out 24(%rbp): left  descriptor
+// out 32(%rbp): right id
+// out 40(%rbp): right descriptor
 .type retrieve_field_access, @function
 .global retrieve_field_access
 retrieve_field_access:
         push %rbp
         mov %rsp, %rbp
         mov %rdi, %rax
-        movq $8, %rdx
+        movq $16, %rdx
         mulq %rdx
         mov %rax, %rbx
 
         lea field_access_buffer(%rip), %rax
         xor %rdi, %rdi
         xor %rsi, %rsi
-        mov   (%rax, %rbx), %edi # identifier descriptor
-        mov  4(%rax, %rbx), %esi # field descriptor
+        mov   (%rax, %rbx), %edi # left  id
+        mov  4(%rax, %rbx), %esi # left  descriptor
+        mov  8(%rax, %rbx), %edx # right id
+        mov 12(%rax, %rbx), %ecx # right descriptor
         
         mov %edi, 16(%rbp)
         mov %esi, 24(%rbp)
+        mov %edx, 32(%rbp)
+        mov %ecx, 40(%rbp)
 
         leave
         ret

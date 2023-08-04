@@ -60,7 +60,20 @@ emit:
         mov %rsp, %rbp 
         push %rdi
         push %rsi
+
+
+        # My print implementation
+        # Expects value to print in rdi
         call emit_asm_prologue
+        call emit_print
+        call emit_colon
+        call emit_function_prologue
+        call emit_print_body
+        call emit_function_epilogue
+        
+        call emit_newline
+        
+        call emit_entry_point
         call emit_function_prologue
         call emit_call
         call emit_main
@@ -73,14 +86,6 @@ emit:
         call visit_statement
 
 
-        # My print implementation
-        # Expects value to print in rdi
-        call emit_newline
-        call emit_print
-        call emit_colon
-        call emit_function_prologue
-        call emit_print_body
-        call emit_function_epilogue
 
         leave
         ret
@@ -482,25 +487,17 @@ visit_statement:
         movq %rsi, %rdi
         call retrieve_assignment
     visit_assignment_stack_init_done:
-        # Evaluate the destination first.
-        # Needs to be done for array access.
-        # a[expr]
 
         movq -40(%rbp), %rsi
         movq -32(%rbp), %rdi
         call get_offset_on_stack
         movq %rax, -8(%rbp)
 
-        movq -40(%rbp), %rdi
-        cmp $41, %rdi # Array Access
-        je visit_assignment_array_access
-
-        
-        
         # Eval the right side
         movq -24(%rbp), %rdi
         movq -16(%rbp), %rsi
         call visit_expression
+
         # At this point we need to determine what we are dealing with
         # It could either be a primitive
         # Or it could be a struct
@@ -1424,6 +1421,16 @@ emit_print_body:
         leave
         ret
 
+.type emit_entry_point, @function
+emit_entry_point:
+        enter $0, $0
+        movq $1, %rax
+        movq $1, %rdi
+        leaq _emit_entry_point, %rsi
+        movq $23, %rdx
+        syscall
+        leave
+        ret
 
 .type emit_asm_prologue, @function
 emit_asm_prologue:
@@ -1432,7 +1439,7 @@ emit_asm_prologue:
         movq $1, %rax
         movq $1, %rdi
         leaq _emit_asm_prologue, %rsi
-        movq $38, %rdx
+        movq $15, %rdx
         syscall
         leave
         ret

@@ -110,7 +110,10 @@
         number_9:   .asciz "9" # value: 57
 
 .global _emit_asm_prologue
-        _emit_asm_prologue:       .asciz ".section .text\n.global _start\n_start:\n"
+        _emit_asm_prologue:       .asciz ".section .text\n"
+
+.global _emit_entry_point
+        _emit_entry_point:        .asciz ".global _start\n_start:\n"
 
 .global _emit_function_prologue
         _emit_function_prologue:  .asciz "\n\tpush %rbp\n\tmov %rsp, %rbp\n"

@@ -137,10 +137,12 @@ array_expr: size = 4
     type: 34
     count:       descriptor
 
-field_access: size = 8
-    type: 36 # TODO! Add a struct type for nested field_access
-    struct name: descriptor
-    field:       descriptor
+field_access: size = 16
+    type: 36
+    left->type:  token_id
+    left->desc:  descriptor
+    right->type: token_id
+    right->desc: descriptor
 
 struct_instance: size = 8
     type: 38
@@ -274,8 +276,8 @@ print_statement_buffer: size = 8
 struct_type_buffer: size = 8
     [(name_descriptor, struct_descriptor),...]
 
-field_acces_buffer: size = 8
-    [(structname_Descriptor, field_descriptor),...]
+field_acces_buffer: size = 16
+    [(left_id, left_descriptor, right_id, right_descriptor),...]
 
 struct_buffer: size = 8 + 4 * count
     [(name_descriptor, count_int, field_descriptor[] ),...]
