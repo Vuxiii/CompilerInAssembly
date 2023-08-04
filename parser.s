@@ -682,23 +682,18 @@ assignment:
         subq $8, %rsp
         movq %rdi, -8(%rbp)
 
+        call parse_symbol_access
+        push %rax
+        push %rbx
+
         call peek_token_id
-        cmp $37, %rax # dot '.'
-        je assignment_field_acces
-        cmp $9, %rax # Is it '['
-        je assignment_array_identifier
+        cmp $4, %rax
+        jne emit_parse_error_unexpected_token
 
-        # Check for function call
-        # We now assume '='
-
-        # current_token_id: identifier
-        # peek_token_id:    '='
-        call current_token_id
-        push %rax
-        call current_token_data
-        push %rax
-    assignment_parse_rhs:
         call next_token
+        # Current: '='        
+
+    assignment_parse_rhs:
         # Parse the right hand side of the assignment
         call parse_expression
         // rax: token_id of output from parse_expression
@@ -732,122 +727,7 @@ assignment:
         movq $29, %rax  # Store the assignment id
         leave
         ret
-    assignment_field_acces:
-        call parse_symbol_access
-
-
-
-
-        
-        // TODO! Check peek for '[' or '='
-
-        call peek_token_id
-        cmp $4, %rax
-        je assignment_parse_rhs
-        
-        cmp $9, %rax
-        jne emit_parse_error_missing_lbracket
-
-        call next_token
-        # Current: '['
-
-        call parse_expression
-        push %rax
-        push %rbx
-        call next_token
-        # Current: ']'
-
-        call current_token_id
-        cmp $10, %rax
-        jne emit_parse_error_missing_rbracket
-        
-        jmp emit_not_implemented
-
-        jmp assignment_parse_rhs
-    assignment_array_identifier:
-        # Store identifier
-        call current_token_id
-        push %rax
-        call current_token_data
-        push %rax
-        call next_token
-
-        call current_token_id
-        cmp $9, %rax
-        jne emit_parse_error_missing_lbracket
-
-        # current: '['
-        # TODO! Add error handling here.
-        # For now, just assume it is a number
-        call parse_expression
-        push %rax
-        push %rbx
-
-        call next_token
-        # current: ']'
-
-        call current_token_id
-        cmp $10, %rax
-        jne emit_parse_error_missing_rbracket
-
-        # At this point, it be
-        # * An array initialization 
-        # * An array access. 
-        # * A field array access 
-
-        call peek_token_id
-        cmp $4, %rax
-        je assignment_array_identifier_access
-        cmp $37, %rax # dot '.'
-        je assignment_array_field_access
-    assignment_array:
-        movq   (%rsp), %rdx # count
-        movq 16(%rsp), %rsi # Token descriptor
-        movq 24(%rsp), %rdi # Token id
-        movq $8, %rcx       # Stride, ints are 8 bytes
-        call construct_array_assignment
-        movq %rax, %rbx
-        movq $40, %rax
-
-        # Check if '*' was present. If it was there was an error
-        movq -8(%rbp), %rcx
-        cmp $1, %rcx
-        je emit_parse_error_unexpected_deref
-        leave
-        ret
-    assignment_array_identifier_access:
-        pop %rcx # index descriptor
-        pop %rdx # index type
-        pop %rsi # identifier descriptor
-        pop %rdi # identifier id
-        call construct_array_access
-        push $41
-        push %rax
-        jmp assignment_parse_rhs
-    assignment_array_field_access:
-        # At this point we need to identify the fields that are accessed. We can then construct a field access and replace it with the identifier descriptor and id.
-        call next_token
-        # Current: '.'
-        # peek: 'identifier'
-        
-        call peek_token_id
-        cmp $24, %rax
-        jne emit_parse_error_expected_identifier
-
-        call peek_token_data # The field
-        movq 16(%rsp), %rdi
-        movq %rax, %rsi
-        call construct_field_access_node
-        movq %rax, %rsi
-        movq $36, %rdi
-        pop %rcx
-        pop %rdx
-        addq $16, %rsp
-        call construct_array_access
-        push $41
-        push %rax
-        call next_token
-        jmp assignment_parse_rhs
+    
 
 // out rax: token id
 // out rbx: token descriptor
