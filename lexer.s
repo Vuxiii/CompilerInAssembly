@@ -218,12 +218,14 @@ identify_token:
 
         movq %rdx, %rdi
         movq $token_def, %rsi
-        cmpsl
+        movq $3, %rcx
+        repe cmpsb
         je return_def_token
 
         movq %rdx, %rdi
         movq $token_let, %rsi
-        cmpsl
+        movq $3, %rcx
+        repe cmpsb
         je return_let_token
 
         movq %rdx, %rdi
@@ -244,13 +246,12 @@ identify_token:
 
         movq %rdx, %rdi
         movq $token_if, %rsi
-        movq $2, %rcx
-        repe cmpsb
+        cmpsw
         je return_if_token
 
         movq %rdx, %rdi
         movq $token_return, %rsi
-        movq $7, %rcx
+        movq $6, %rcx
         repe cmpsb
         je return_return_token
 
@@ -413,6 +414,8 @@ identify_token:
             movq $1, %rax
             ret
         return_let_token:
+            call is_char
+            je return_not_keyword
             movq %rdi, (buffer_address)(%rip)
 
             movq $0, %rbx
@@ -436,18 +439,6 @@ identify_token:
             movq $0, %rbx
             movq $60, %rax
             ret
-        return_int_token:
-            movq %rdi, (buffer_address)(%rip)
-
-            movq $0, %rbx
-            movq $54, %rax
-            ret
-        return_double_token:
-            movq %rdi, (buffer_address)(%rip)
-
-            movq $0, %rbx
-            movq $55, %rax
-            ret
         return_void_token:
             movq %rdi, (buffer_address)(%rip)
 
@@ -461,6 +452,8 @@ identify_token:
             movq $52, %rax
             ret
         return_return_token:
+            call is_char
+            je return_not_keyword
             movq %rdi, (buffer_address)(%rip)
 
             movq $0, %rbx
@@ -468,7 +461,7 @@ identify_token:
             ret
         return_if_token:
             call is_char
-            jne return_not_keyword
+            je return_not_keyword
             movq %rdi, (buffer_address)(%rip)
 
             movq $0, %rbx
@@ -535,12 +528,16 @@ identify_token:
             movq $10, %rax
             ret
         return_print_token:
+            call is_char
+            je return_not_keyword
             movq %rdi, (buffer_address)(%rip)
 
             movq $0, %rbx
             movq $11, %rax
             ret
         return_while_token:
+            call is_char
+            je return_not_keyword
             movq %rdi, (buffer_address)(%rip)
 
             movq $0, %rbx
@@ -583,18 +580,24 @@ identify_token:
             movq $18, %rax
             ret
         return_true_token:
+            call is_char
+            je return_not_keyword
             movq %rdi, (buffer_address)(%rip)
 
             movq $0, %rbx
             movq $19, %rax
             ret
         return_false_token:
+            call is_char
+            je return_not_keyword
             movq %rdi, (buffer_address)(%rip)
 
             movq $0, %rbx
             movq $20, %rax
             ret
         return_struct_token:
+            call is_char
+            je return_not_keyword
             movq %rdi, (buffer_address)(%rip)
 
             movq $0, %rbx
@@ -631,6 +634,8 @@ identify_token:
             movq $45, %rax
             ret
         return_loop_token:
+            call is_char
+            je return_not_keyword
             movq %rdi, (buffer_address)(%rip)
 
             movq $0, %rbx

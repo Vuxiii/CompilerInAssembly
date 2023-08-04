@@ -159,24 +159,23 @@ read_char:
     addq %rcx, %rsi
     syscall
     ret
-
+    
 // in  rdi: char *character
 // out: Conditional flag. je if equal jne if not equal
 .global is_char
 .type is_char, @function
 is_char:
-        xor %rax, %rax
         movb (%rdi), %bl
-        andb $31, %bl # Trick to remove the 6th bit
+        andb $223, %bl # 223 -> 1101 1111
+        # Trick to remove the 6th bit
         # We now only have to compare twice
         # In the range [65; 90]
         cmpb $65, %bl
         setge %al
         cmpb $90, %bl
         setle %bl
-        test %bl, %al
+        cmpb %bl, %al
         ret
-
 
 main_loop:
     movq $0, %r8

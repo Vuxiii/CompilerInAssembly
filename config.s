@@ -28,7 +28,7 @@
 .global token_none
         token_none:       .asciz "None"  # 0
 .global token_def
-        token_def:        .asciz "def "   # 1
+        token_def:        .asciz "def"   # 1
 .global token_if
         token_if:         .asciz "if"    # 2
 .global token_equals
@@ -90,7 +90,7 @@
 .global token_loopii
         token_loopii:     .asciz "loop"  # 49
 .global token_return
-        token_return:     .asciz "return "# 50
+        token_return:     .asciz "return"# 50
 .global token_arrow
         token_arrow:      .asciz "->"    # 52
 .global token_int
@@ -100,7 +100,7 @@
 .global token_void
         token_void:       .asciz "void "  # 56
 .global token_let
-        token_let:        .asciz "let "   # 57
+        token_let:        .asciz "let"   # 57
 .global token_colon
         token_colon:      .asciz ":"     # 58
 .global token_coloneq
