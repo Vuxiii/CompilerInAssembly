@@ -616,8 +616,8 @@ function_call:
 
 // out rax: token id
 // out rbx: token descriptor
-.type parse_field_access, @function
-parse_field_access:
+.type parse_symbol_access, @function
+parse_symbol_access:
         enter $16, $0
         #  -8(%rbp) -> left id
         # -16(%rbp) -> left descriptor
@@ -627,19 +627,19 @@ parse_field_access:
         call current_token_data
         movq %rax, -16(%rbp) # Store the left descriptor
         
-    parse_field_access_try_parse_right:
+    parse_symbol_access_try_parse_right:
         call peek_token_id
         cmp $9, %rax
-        je parse_field_access_left_array_access
+        je parse_symbol_access_left_array_access
         cmp $37, %rax
-        jne parse_field_access_return_left
+        jne parse_symbol_access_return_left
     
         call next_token
         # Current: '.'
         call next_token
         # Current: identifier
 
-        call parse_field_access
+        call parse_symbol_access
         movq %rax, %rdx
         movq %rbx, %rcx
         movq  -8(%rbp), %rdi
@@ -650,7 +650,7 @@ parse_field_access:
         movq $36,  %rax
         leave
         ret
-    parse_field_access_left_array_access:
+    parse_symbol_access_left_array_access:
         call next_token
         # Current: '['
 
@@ -664,8 +664,8 @@ parse_field_access:
         movq $41,   -8(%rbp)
         call next_token
         # Current: ']'
-        jmp parse_field_access_try_parse_right
-    parse_field_access_return_left:
+        jmp parse_symbol_access_try_parse_right
+    parse_symbol_access_return_left:
         movq  -8(%rbp), %rax
         movq -16(%rbp), %rbx
         leave
@@ -733,7 +733,7 @@ assignment:
         leave
         ret
     assignment_field_acces:
-        call parse_field_access
+        call parse_symbol_access
 
 
 
