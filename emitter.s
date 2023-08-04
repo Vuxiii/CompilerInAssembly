@@ -1101,8 +1101,6 @@ visit_expression:
         callq emit_dollar
         # Retrieve the number
         pop %rdi
-        callq retrieve_number
-        movq %rax, %rdi
         callq emit_number
         callq emit_newline_tab
         leave
@@ -1317,8 +1315,7 @@ emit_load_array_access:
 
     # 2
 
-        movq 16(%rsp), %rdi
-        call retrieve_number
+        movq 16(%rsp), %rax
         movq $8, %rdx
         imulq %rdx
         pop %rbx

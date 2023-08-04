@@ -1,9 +1,7 @@
 .section .data
 
-.extern number_tokens
 .extern identifier_tokens
 
-number_count:       .int 0
 identifier_count:   .int 0
 
 .section .text
@@ -44,30 +42,6 @@ insert_chars:
 retrieve_identifier:
     lea identifier_tokens(%rip), %rax
     addq %rdi, %rax
-    ret
-
-
-// in:  %rdi: number
-// out: %rax: number descriptor
-.global insert_number
-.type insert_number, @function
-insert_number:
-    leaq number_tokens(%rip), %rax
-    xor %rsi, %rsi
-    mov number_count(%rip), %esi
-    mov %rdi, (%rax, %rsi, 4)
-    mov %rsi, %rax
-    inc %rsi
-    mov %esi, number_count(%rip)
-    ret
-
-// in:  %rdi: number descriptor
-// out: %rax: the number associated with the descriptor
-.global retrieve_number
-.type retrieve_number, @function
-retrieve_number:
-    lea number_tokens(%rip), %rax
-    mov (%rax, %rdi, 4), %eax
     ret
 
 // in: %rdi: String 1
@@ -159,7 +133,7 @@ read_char:
     addq %rcx, %rsi
     syscall
     ret
-    
+
 // in  rdi: char *character
 // out: Conditional flag. je if equal jne if not equal
 .global is_char

@@ -284,8 +284,6 @@ astprint_expr:
         // call emit_arrow
 
         // movq 16(%rsp), %rdi
-        // call retrieve_number
-        // movq %rax, %rdi
         // call emit_number
 
 
@@ -427,8 +425,6 @@ astprint_expr:
         push %rsi
         call emit_number_
         pop %rdi
-        callq retrieve_number
-        movq %rax, %rdi
         callq emit_number
         leave
         ret

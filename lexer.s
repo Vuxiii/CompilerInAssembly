@@ -150,8 +150,7 @@ not_keyword:
     # Register the computed number and store the descriptor somewhere
     addq %rcx, %rdi
     movq %rdi, (buffer_address)(%rip)
-    movq %rbx, %rdi
-    callq insert_number
+    movq %rbx, %rax
     jmp get_token_return_number
 
 not_a_number:
@@ -660,7 +659,7 @@ get_token_return_keyword:
         ret
 get_token_return_number:
         // rax: number token id
-        // rbx: number descriptor
+        // rbx: the number
         movq %rax, %rbx
         movq $25, %rax
         leave

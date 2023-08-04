@@ -7,11 +7,6 @@
 .global filesize
         filesize: .int 4096
 
-.global number_tokens
-        number_tokens:     .space 256 # These number tokens can be indexed into. Each number spans 4 bytes (32 bit)
-                        //    .type number_token, .int
-                           .size number_tokens, 4
-
 .global identifier_tokens
         identifier_tokens: .space 256 # These identifier tokens can be indexed into. Each identifier is terminated with a '\0' null char
 

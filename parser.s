@@ -351,9 +351,7 @@ declaration_statement:
         call parse_expression
         cmp $25, %rax
         jne error_parse_expected_number
-        movq %rbx, %rdi
-        call retrieve_number
-        push %rax                # Amount of elements in array
+        push %rbx                # Amount of elements in array
         call peek_token_id
         cmp $10, %rax
         jne emit_parse_error_missing_rbracket
