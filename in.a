@@ -1,13 +1,13 @@
 def main() {
     let Point :: struct {x: int, y: int}
-    let ifs: int = 2
-    let whiles: int = 3
-    let returns: int = 4
-    while (true) {
-        print(1)
-    }
-    let a: int = 2
-    print(a)
+    let p1: Point
+    let a: int
+    p1.x = 1
+    p1.y = 2
+
+    print(p1.x)
+    print(p1.y)
+
 } EOP
 
 def fib() -> int {

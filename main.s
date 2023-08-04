@@ -42,6 +42,7 @@ _start:
     read_from_stdin:
         jmp emit_no_inputfile # Not supported yet
     end_read_setup:
+    
         call parse
         movq %rax, %rdi
         movq %rbx, %rsi

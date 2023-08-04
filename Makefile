@@ -31,7 +31,7 @@ utils.o: utils.s
 errors.o: errors.s
 	as -g errors.s -o errors.o
 
-phony: clean run crun
+phony: clean run test
 
 clean:
 	find . -name '*.o' -delete
@@ -41,8 +41,8 @@ clean:
 	find . -name '*.actual' -delete
 
 
-run:	
-	make -s && echo "\nDone Compiling the code!\nRunning the code:\n" && ./main
+run:
+	./run.sh
 
-crun:
-	make -s clean && echo "====COMPILE====" && make -s run
+test:
+	./utest.sh

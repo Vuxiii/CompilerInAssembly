@@ -8,6 +8,7 @@ setup_types:
 
         movq $0, -8(%rbp)
         lea type_buffer(%rip), %rax
+        addq $60, %rax
         movq %rax, -16(%rbp)
     setup_types_next_type:
         movq -16(%rbp), %rax
