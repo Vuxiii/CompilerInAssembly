@@ -865,8 +865,117 @@ visit_expression:
         ret
 
     identifier:
-        push %rdi
-        push %rsi
+        # We want to check the identifier's type.
+        # If it is of type struct, we need to load each field
+        # The primitive types are just a subset of the above,
+        # Where the struct only contains a single field.
+        enter $24, $0
+        #  -8(%rbp) -> identifier descriptor
+        # -16(%rbp) -> identifier id
+        # -24(%rbp) -> base offset on the stack
+        movq %rdi, -16(%rbp)
+        movq %rsi,  -8(%rbp)
+        
+        movq -16(%rbp), %rsi
+        movq  -8(%rbp), %rdi
+        call get_offset_on_stack
+        movq %rax, -24(%rbp)
+
+        movq -8(%rbp), %rdi
+        call find_declaration_by_name
+        movq %rax, %rdi
+        push $696969 # type descriptor
+        push $696969 # name descriptor
+        call retrieve_declaration
+        addq $8, %rsp
+        pop %rdi
+        call retrieve_identifier
+        movq %rax, %rdi
+        call find_type_by_charptr
+        movq %rax, %rdi
+        push $696969 # type descriptor
+        push $696969 # type id
+        push $696969 # size int
+        push $696969 # char *name
+        call retrieve_type
+        
+        cmpq $0, 16(%rsp)
+        je identifier_primitive
+    identifier_struct:
+        # We now want to push each field on the stack
+        # One by one.
+        # Let us push it in reverse order.
+        # That way the assign to can do it in the 'normal' direction
+        movq 24(%rsp), %rdi
+        push $696969 # field descriptor *
+        push $696969 # field count
+        push $696969 # struct name descriptor
+        call retrieve_struct_decl
+        movq (%rsp), %rdi
+        movq %rdi, -8(%rbp)
+        movq 16(%rsp), %rdi # field descriptor *
+        movq  8(%rsp), %rsi # Count
+
+
+            enter $16, $1
+            #  -8(%rbp) -> count
+            # -16(%rbp) -> current field descriptor *
+            movq %rsi,  -8(%rbp)
+
+            # Reverse order
+            shl $2, %rsi
+            addq %rsi, %rdi
+
+            movq %rdi, -16(%rbp)
+        identifier_struct_push_field:
+            movq -16(%rbp), %rdi
+            movq (%rdi), %rdi
+            subq $1,  -8(%rbp) # Decrease the counter
+            subq $4, -16(%rbp) # Progress to the next descriptor
+            push $696969 # type descriptor
+            push $696969 # name descriptor
+            call retrieve_declaration
+
+            //TODO! Futureproof with correct move instruction.
+
+            call emit_mov
+            call emit_minus
+
+            pop %rsi
+            addq $8, %rsp
+            movq (%rbp), %rdi
+            movq -8(%rdi), %rdi
+            call get_relative_offset_for_field
+            movq (%rbp), %rdi
+            movq -24(%rdi), %rdi
+            addq %rax, %rdi
+            call emit_number
+            
+            call emit_lparen
+            call emit_rbp
+            call emit_rparen
+            call emit_comma
+            call emit_rax
+            call emit_push
+            call emit_rax
+
+
+            cmpq $0, -8(%rbp) 
+            jg identifier_struct_push_field
+            leave
+            
+        call emit_newline
+        
+        leave
+        leave
+        ret
+    identifier_primitive:
+        # Here we can decide on the correct move isntruction,
+        # depending on the size of the target
+
+        # However, for now we just ignore it.
+        //TODO! Futureproof with correct move instructions.
+        addq $32, %rsp
         call emit_mov
         
         pop %rdi

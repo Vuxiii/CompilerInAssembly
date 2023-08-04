@@ -2284,6 +2284,7 @@ retrieve_loop:
 
         leave
         ret
+
 // in rdi: Token descriptor
 // out 16(%rbp): name descriptor
 // out 24(%rbp): type descriptor

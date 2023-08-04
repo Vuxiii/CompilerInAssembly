@@ -502,7 +502,7 @@ set_offset_on_stack:
         ret
 
 // in rdi: the descriptor of the identifier
-// in rsi: token field/identifier
+// in rsi: token id field/identifier
 .global get_offset_on_stack
 .type get_offset_on_stack, @function
 get_offset_on_stack:
@@ -555,7 +555,8 @@ get_offset_on_stack:
         ret
 
 
-// in rdi: variable name descriptor
+// in  rdi: variable name descriptor
+// out rax: declaration descriptor
 .type find_declaration_by_name, @function
 .global find_declaration_by_name
 find_declaration_by_name:
@@ -598,6 +599,7 @@ find_declaration_by_name:
 
 // in rdi: struct name descriptor
 // in rsi: field name descriptor
+// out rax: the relative offset from the base offset
 .type get_relative_offset_for_field, @function
 .global get_relative_offset_for_field
 get_relative_offset_for_field:

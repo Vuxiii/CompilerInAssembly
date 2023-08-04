@@ -7,11 +7,26 @@ s2: .asciz "void asdf"
 _start:
         enter $8, $0
     
-        movq $s1, %rdi
-        call is_char
-        je crash
+        push $123
+
+        movq $69, -8(%rbp)
+        enter $8, $1
+
+
+        movq $420, -8(%rbp)
+        
+        movq 8(%rbp), %rax
+        movq 16(%rbp), %rbx
+        movq (%rbp), %rdi
+        movq -8(%rdi), %rsi
 
         leave
+
+
+        leave
+
+        jmp crash
+
         movq $60, %rax
         movq $1, %rdi
         syscall
