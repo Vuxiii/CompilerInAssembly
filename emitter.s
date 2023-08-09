@@ -507,7 +507,9 @@ visit_statement:
 
         movq -40(%rbp), %rdi
         cmp $36, %rdi # Array Access
-        je assignment_primitive
+        je assignment_primitive_skip_pop_stack
+        cmp $36, %rdi # Field access
+        je assignment_primitive_skip_pop_stack
 
         movq -32(%rbp), %rdi
         call find_type_by_name
@@ -521,7 +523,7 @@ visit_statement:
         cmpq $0, 16(%rsp)
         je assignment_primitive
     assignment_struct:
-        # At this point we are dealing wit ha struct
+        # At this point we are dealing with a struct
         movq 24(%rsp), %rdi
         push $696969 # field descriptor *
         push $696969 # field count
@@ -583,6 +585,7 @@ visit_statement:
         # However, for now we just ignore it.
         //TODO! Futureproof with correct move instructions.
         addq $32, %rsp
+    assignment_primitive_skip_pop_stack:
         call emit_pop
         call emit_rax
 

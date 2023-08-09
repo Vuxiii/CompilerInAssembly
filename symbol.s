@@ -518,27 +518,25 @@ get_offset_on_stack:
     get_field_offset:
         # Step [1]: Locate the symbol
         # Step [2]: Locate the field offset
-        enter $24, $0
-        //  -8(%rbp)  -> field descriptor
-        // -16(%rbp)  -> variable descriptor
-        // -24(%rbp)  -> Base offset int
-        push $696969 # field descriptor
-        push $696969 # variable descriptor
+        enter $40, $0
+        //  -8(%rbp)  -> Base offset int
+        // -16(%rbp)  -> right descriptor
+        // -24(%rbp)  -> right id
+        // -32(%rbp)  -> left  descriptor
+        // -40(%rbp)  -> left  id
         call retrieve_field_access
-        pop %rdi 
-        pop %rsi 
-        movq %rsi,  -8(%rbp)
-        movq %rdi, -16(%rbp)
+
+        # Right now we are assuming left is identifier
 
         # Base offset
-        movq -16(%rbp), %rdi
+        movl -32(%rbp), %edi
         call locate_symbol
         movl 8(%rax), %eax
         cltq # Sign extend. (remove the top 32 bits rax)
-        movq %rax, -24(%rbp)
+        movq %rax, -8(%rbp)
 
         # Relative offset
-        movq -16(%rbp), %rdi
+        movl -32(%rbp), %edi
         call find_declaration_by_name
         movq %rax, %rdi
         push $696969 # Type descriptor
@@ -546,9 +544,9 @@ get_offset_on_stack:
         call retrieve_declaration
         addq $8, %rsp
         pop %rdi
-        movq -8(%rbp), %rsi
+        movl -16(%rbp), %esi
         call get_relative_offset_for_field
-        addq -24(%rbp), %rax
+        addl -8(%rbp), %eax
         leave
         leave
         ret

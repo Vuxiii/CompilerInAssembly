@@ -234,7 +234,7 @@ parse_statement:
         jmp check_statement_list
 
     some_statement:
-        # Determine if it is a functioncall
+        # Determine if it is a function_call
         # Or an assignment
         call next_token
         # current_token_id: identifier
@@ -260,7 +260,6 @@ parse_statement:
 
 
     assignment_:
-
         movq $0, %rdi
         call assignment
         push %rax # id
@@ -662,6 +661,7 @@ parse_symbol_access:
         call construct_array_access
         movq %rax, -16(%rbp) # Store the left descriptor
         movq $41,   -8(%rbp)
+        
         call next_token
         # Current: ']'
         jmp parse_symbol_access_try_parse_right
@@ -677,9 +677,7 @@ parse_symbol_access:
 // out rbx: token descriptor
 .type assignment, @function
 assignment:
-        push %rbp
-        movq %rsp, %rbp
-        subq $8, %rsp
+        enter $8, $0
         movq %rdi, -8(%rbp)
 
         call parse_symbol_access
@@ -729,45 +727,6 @@ assignment:
         ret
     
 
-// out rax: token id
-// out rbx: token descriptor
-.type deref_assignment, @function
-deref_assignment:
-        push %rbp
-        movq %rsp, %rbp
-
-        call next_token
-        # Current: '*'
-        
-        # Assume for now that we only accept identifiers
-        call next_token
-        # Current: 'identifier'
-        call current_token_id
-        movq %rax, %rdi
-        call current_token_data
-        movq %rax, %rsi
-
-        call construct_deref
-        push $44
-        push %rax
-        
-        call next_token
-        # Current: '='        
-
-        call parse_expression
-        push %rax
-        push %rbx
-
-        pop %rcx
-        pop %rdx
-        pop %rsi
-        pop %rdi
-        call construct_assignment_node
-        movq %rax, %rbx # Store the assignment descriptor
-        movq $29, %rax  # Store the assignment id
-
-        leave
-        ret
 // out rax: token id
 // out rbx: token descriptor
 .type function_declaration, @function
@@ -1224,6 +1183,7 @@ parse_expression:
     # [1]: '(' expr ')'
     # [2]: 'number'
     # [3]: 'identifier'
+    # [3a]:some_symbol_access
     # [4]: 'identifier' '[' expr ']'
     # [5]: 'identifier' '.' 'identifier'
     # [6]: 'identifier' '.' 'identifier' '[' expr ']'
@@ -1241,7 +1201,7 @@ parse_expression:
             cmp $20, %rax
             je parse_token_return_true_false
             cmp $24, %rax
-            je parse_token_return_identifier
+            je parse_token_return_symbol_access
             cmp $42, %rax
             je parse_token_return_addressof
             cmp $45, %rax
@@ -1272,95 +1232,14 @@ parse_expression:
             call current_token_id
             leave
             ret
-        parse_token_return_identifier:
+        parse_token_return_symbol_access:
         # Case [3]
             call next_token
-            
-            call peek_token_id
-            cmp $37, %rax # dot '.'
-            je parse_token_return_field_access
-            cmp $9, %rax # bracket '['
-            je parse_token_return_identifier_array_access
-
-            call current_token_data
-            movq %rax, %rbx
-            call current_token_id
+            # Current: 'identifier'
+            call parse_symbol_access
             leave
             ret
-        parse_token_return_identifier_array_access:
-        # Case [4]
-            call current_token_data
-            push %rax
-            call current_token_id
-            push %rax
-
-            call next_token
-            # current: '['
-
-            call current_token_id
-            cmp $9, %rax
-            jne emit_parse_error_missing_lbracket
-
-            call parse_expression
-            push %rax
-            push %rbx
-
-            call next_token
-            # current: ']'
-
-            call current_token_id
-            cmp $10, %rax
-            jne emit_parse_error_missing_rbracket
-
-
-            call peek_token_id
-            cmp $37, %rax # dot '.'
-            je parse_token_return_field_access_array_access
-            
-            pop %rcx
-            pop %rdx
-            pop %rdi
-            pop %rsi
-            call construct_array_access
-            movq %rax, %rbx
-            movq $41, %rax
-            leave
-            ret
-        parse_token_return_field_access:
-        # Case [5]
-            call current_token_data
-            push %rax
-            call next_token # eat '.'
-            call next_token # eat 'identifier' - field
-            call current_token_data
-            movq %rax, %rsi
-            pop %rdi
-            call construct_field_access_node
-            movq %rax, %rbx
-            movq $36, %rax
-            leave
-            ret
-        parse_token_return_field_access_array_access:
-        # Case [6]
-            call next_token 
-            # current: '.'
-
-            call next_token 
-            # current 'identifier' - field
-            call current_token_data
-            movq %rax, %rsi
-            movq 24(%rsp), %rdi
-            call construct_field_access_node
-            movq %rax, %rsi
-            movq $36, %rdi
-            
-            pop %rcx
-            pop %rdx
-            call construct_array_access
-            movq %rax, %rbx
-            movq $41, %rax
-            leave
-            ret
+        
         parse_token_return_addressof:
         # Case [7]
             call next_token
