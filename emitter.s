@@ -506,9 +506,7 @@ visit_statement:
         # Or it could be a struct
 
         movq -40(%rbp), %rdi
-        cmp $36, %rdi # Array Access
-        je assignment_primitive_skip_pop_stack
-        cmp $36, %rdi # Field access
+        cmp $36, %rdi # Field Access
         je assignment_primitive_skip_pop_stack
 
         movq -32(%rbp), %rdi
