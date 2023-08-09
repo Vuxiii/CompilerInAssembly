@@ -582,6 +582,7 @@ visit_statement:
 
         # However, for now we just ignore it.
         //TODO! Futureproof with correct move instructions.
+        addq $32, %rsp
         call emit_pop
         call emit_rax
 
@@ -642,8 +643,6 @@ visit_statement:
         movq  (%rsp), %rsi
         movq 8(%rsp), %rdi
         call get_offset_on_stack
-        movq $8, %rdx
-        imulq %rdx
         # base offset
         push %rax
 
@@ -673,6 +672,13 @@ visit_statement:
         call emit_mov
         call emit_dollar
         pop %rdi # type
+        push $696969 # type descriptor
+        push $696969 # type id
+        push $696969 # size int
+        push $696969 # char *name
+        call retrieve_type
+        movq 8(%rsp), %rdi
+        addq $32, %rsp
         call emit_number
         call emit_comma
         call emit_rdx
@@ -713,7 +719,7 @@ visit_statement:
         call emit_comma
         call emit_rcx
         call emit_rparen
-
+        leave
         leave
         ret
 
@@ -1063,11 +1069,11 @@ visit_expression:
 
         # However, for now we just ignore it.
         //TODO! Futureproof with correct move instructions.
-        addq $32, %rsp
         call emit_mov
-        
-        pop %rdi
-        pop %rsi
+         #  -8(%rbp) -> identifier descriptor
+        # -16(%rbp) -> identifier id
+        movq  -8(%rbp), %rdi
+        movq -16(%rbp), %rsi
         call emit_var
 
         call emit_comma
@@ -1255,9 +1261,6 @@ emit_load_array_access:
         pop %rdi # identifier token
         push %rax # type
         call get_offset_on_stack
-        cltq
-        movq $8, %rdx
-        imulq %rdx
         push %rax # Base offset
     # 2
         movq 24(%rsp), %rsi
@@ -1268,8 +1271,12 @@ emit_load_array_access:
         call emit_rax
         call emit_mov
         call emit_dollar
-        movq 8(%rsp), %rdi # type //TODO! Fix me
+
+        movq 8(%rsp), %rdi # type 
+        call get_size_of_type
+        movq %rax, %rdi
         call emit_number
+
         call emit_comma
         call emit_rdx
         call emit_mul
@@ -1308,9 +1315,6 @@ emit_load_array_access:
         pop %rsi
         pop %rdi
         call get_offset_on_stack
-        cltq
-        movq $8, %rdx
-        imulq %rdx
         push %rax # Base offset
 
     # 2

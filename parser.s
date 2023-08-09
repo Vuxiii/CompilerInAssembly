@@ -2452,6 +2452,21 @@ retrieve_statement_list:
         leave
         ret
 
+// in rdi: Type descriptor
+// out rax: The size of the type (int)
+.type get_size_of_type, @function
+.global get_size_of_type
+get_size_of_type:
+        enter $0, $0
+        push $696969 # type descriptor
+        push $696969 # type id
+        push $696969 # size int
+        push $696969 # char *name
+        call retrieve_type
+        movq 8(%rsp), %rax
+        leave
+        ret
+
 // in rdi: Token descriptor
 // out 16(%rbp): char *name
 // out 24(%rbp): size int

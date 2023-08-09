@@ -1,8 +1,12 @@
 def main() {
     let numbers: [2] int
-    
-    numbers[0] = 0
-    
+    numbers[0] = 69
+    numbers[1] = 420
+    let i: int
+    i = 0
+    print(numbers[i])
+    i = 1
+    print(numbers[i])
 } EOP
 
 def fib() -> int {
